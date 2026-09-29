@@ -1,0 +1,57 @@
+name: ci
+
+# Tests the page against the dataset pinned in data.lock, and on main deploys
+# the page with exactly that dataset next to it.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      pinned: ${{ steps.fetch.outputs.pinned }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 22 }
+      - name: Fetch the pinned dataset (sha256 + schema major checked)
+        id: fetch
+        run: |
+          if [ "$(node -p 'JSON.parse(require("fs").readFileSync("data.lock", "utf8")).tag')" = "" ]; then
+            echo "::warning::data.lock has no release pinned yet; testing with fixtures only, not deploying"
+            echo "pinned=false" >> "$GITHUB_OUTPUT"
+          else
+            node scripts/fetch-data.mjs
+            echo "pinned=true" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm test
+      - name: Package the site
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.fetch.outputs.pinned == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with: { path: site }
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.test.outputs.pinned == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

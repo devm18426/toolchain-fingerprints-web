@@ -1,0 +1,62 @@
+name: bump-data
+
+# toolchain-fingerprints sends a data-release dispatch after each release.
+# Pin data.lock to it in a PR (App token, so CI runs on the PR), and let it
+# auto-merge once the tests pass. Can also be run by hand with a tag.
+
+on:
+  repository_dispatch:
+    types: [data-release]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag in the toolchain repo, e.g. data-2.2.0
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-data
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.client_payload.tag || inputs.tag }}
+    steps:
+      - name: Check the tag
+        run: |
+          [[ "$TAG" =~ ^data-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag: $TAG"; exit 1; }
+      - id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app.outputs.token }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with: { node-version: 22 }
+      - name: Pin data.lock and test against the new data
+        run: |
+          node scripts/fetch-data.mjs --update "$TAG"
+          npm test
+      - name: Open the PR (auto-merges when CI is green)
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+        run: |
+          if git diff --quiet -- data.lock; then echo "already pinned to $TAG"; exit 0; fi
+          uid=$(gh api "/users/${SLUG}[bot]" --jq .id)
+          git config user.name "${SLUG}[bot]"
+          git config user.email "${uid}+${SLUG}[bot]@users.noreply.github.com"
+          branch="data/$TAG"
+          git switch -c "$branch"
+          git commit -am "Use dataset $TAG"
+          git push -u origin "$branch"
+          repo=$(node -p 'JSON.parse(require("fs").readFileSync("data.lock", "utf8")).repo')
+          url=$(gh pr create --title "Use dataset $TAG" --head "$branch" \
+                --body "Pins \`data.lock\` to [$TAG](https://github.com/$repo/releases/tag/$TAG).")
+          gh pr merge "$url" --auto --squash

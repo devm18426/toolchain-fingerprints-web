@@ -1,0 +1,11 @@
+{
+  "name": "toolchain-fingerprints-web",
+  "private": true,
+  "type": "module",
+  "description": "Static page that matches toolchain fingerprints against a target. Data comes from a toolchain-fingerprints release pinned in data.lock.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "fetch-data": "node scripts/fetch-data.mjs",
+    "test": "node --test"
+  }
+}
