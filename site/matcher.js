@@ -1,22 +1,28 @@
 // Pure matcher logic: no DOM. Imported by index.html and by the tests.
 // ---- contract ------------------------------------------------------------
 export const SUPPORTED_MAJOR = 2;           // refuse any other major version of the schema
+export const KNOWN_MINOR = 3;               // newest 2.x this page was written against
+// Forward compatibility: within 2.x, fields are only added. This page ignores
+// fields it does not know, treats enum values it does not know as unknown (no
+// rule fires on them), and shows "—" for fields older data does not have.
 
 // ---- field helpers -------------------------------------------------------
 export const get = (r, path) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), r);
 export const base = p => (p || "").split("/").pop();
 export const splitList = s => (s || "").split(/[,\s]+/).map(x => x.trim()).filter(Boolean);
 export const fmt = v => v === "" || v == null ? "—" : Array.isArray(v) ? (v.length ? v.join(", ") : "—")
+               : typeof v === "object" ? (Object.keys(v).length ? Object.entries(v).map(([k, x]) => `${k}=${x}`).join(", ") : "—")
                : typeof v === "boolean" ? (v ? "yes" : "no") : String(v);
 
 // ---- table columns: [schema field path, header, css class] -------------
-// Adding a schema field to the table is one line here. Fields added in a
+// Adding a schema field to the table is one line here. A column key is a field
+// path, or a function for values that need a fallback for older data. Fields added in a
 // minor schema version may be missing from older data; they show as "—".
 export const COLS = [
   ["tc_id", "toolchain"], ["triple", "triple", "mono"], ["libc.kind", "libc"],
   ["libc.version", "libc ver"], ["gcc_version", "gcc"],
   ["elf.machine", "machine"], ["elf.endian", "endian"], ["march", "-march"], ["isa", "isa"],
-  ["float_abi", "float"], ["mips.fp_abi", "MIPS FP ABI"], ["mips.nan", "NaN"], ["arm.vfp_args", "ARM VFP args"],
+  ["float_abi", "float"], [archFamily, "arch"], [archAbi, "arch ABI"],
   ["time.time_t_bits", "time_t bits"], ["time.time64_syscalls", "time64 syscalls"],
   ["kernel.headers", "kernel headers"], ["kernel.min", "min kernel"],
   ["glibc.requires", "needs GLIBC_"], ["glibc.provides", "has GLIBC_"],
@@ -25,6 +31,11 @@ export const COLS = [
   ["ldso.soname", "ldso soname", "mono"], ["libc.soname", "libc soname", "mono"],
   ["static_ok", "static"], ["cxx_ok", "C++"],
 ];
+
+// arch/arch.abi arrived in 2.3; 2.1-2.2 data only has the mips/arm objects
+function archFamily(r){ return r.arch ? r.arch.family : r.mips ? "mips" : r.arm ? "arm" : ""; }
+function archAbi(r){ return r.arch ? r.arch.abi : r.mips || r.arm || null; }
+export const cell = (r, key) => typeof key === "function" ? key(r) : get(r, key);
 
 // ---- target facts the user can supply -----------------------------------
 export const TARGET = [
@@ -110,6 +121,14 @@ export function matchRecord(r, t){
 
 // ---- dataset contract check ------------------------------------------------
 // Returns null if the page can use doc, else the reason it must refuse it.
+// Non-blocking: data from a newer 2.x generator may carry fields this page does not show yet.
+export function newerDataNote(doc){
+  const minor = parseInt(String(doc && doc.schema_version || "").split(".")[1], 10);
+  return minor > KNOWN_MINOR
+    ? `This dataset is schema ${doc.schema_version}, newer than this page (${SUPPORTED_MAJOR}.${KNOWN_MINOR}). Verdicts are still valid; newer fields are not shown yet.`
+    : null;
+}
+
 export function schemaProblem(doc){
   const v = String(doc && doc.schema_version || "");
   if (parseInt(v.split(".")[0], 10) !== SUPPORTED_MAJOR || !Array.isArray(doc.toolchains))

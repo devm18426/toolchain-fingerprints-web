@@ -43,7 +43,10 @@ endianness, machine, glibc version). You can also paste `readelf -h -l -d`,
 | RISKY | a library that real programs (pthreads, `select`, `dlopen`, libm) pull in is missing, e.g. `ld-uClibc.so.1`; only `DT_GNU_HASH` against a uClibc loader |
 | INFO | libc uses `*_time64` with fallback; kernel headers newer than the target kernel |
 
-The page refuses a dataset whose schema major version it does not know.
+The page refuses a dataset whose schema major version it does not know. Newer
+minor versions load with a note: unknown fields are ignored, and unknown enum
+values never trigger a rule. `KNOWN_MINOR` in `site/matcher.js` records the
+newest 2.x the page was written against.
 
 One-time GitHub setup (Pages, the App, auto-merge) is in the toolchain repo's
 `docs/SETUP.md`.

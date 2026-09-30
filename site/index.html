@@ -50,6 +50,7 @@
   .b-ok{background:var(--okbg);color:var(--ok)} .b-no{background:var(--nobg);color:var(--no)} .b-risk{background:var(--riskbg);color:var(--risk)}
   .count{color:var(--muted);font-size:.85rem;margin:10px 2px}
   .error{background:var(--nobg);color:var(--no);border-radius:10px;padding:12px 16px;margin-bottom:20px}
+  .note{background:var(--riskbg);color:var(--risk);border-radius:10px;padding:12px 16px;margin-bottom:20px}
   a{color:var(--accent)}
 </style>
 </head>
@@ -93,7 +94,7 @@
 
 <script type="module">
 import {
-  COLS, TARGET, get, splitList, fmt, matchRecord, schemaProblem, parseTargetText,
+  COLS, TARGET, cell, splitList, fmt, matchRecord, schemaProblem, newerDataNote, parseTargetText,
 } from "./matcher.js";
 
 // ---- UI --------------------------------------------------------------------
@@ -122,13 +123,16 @@ function render(){
   const q = $("q").value.toLowerCase();
   const head = $("head"); head.innerHTML = "";
   ["match", "why"].forEach(h => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
-  COLS.forEach(([k, label]) => {
+  COLS.forEach(([k, label], i) => {
     const th = document.createElement("th"); th.textContent = label;
-    th.onclick = () => { sortDir = sortKey === k ? -sortDir : 1; sortKey = k; render(); };
+    th.onclick = () => { sortDir = sortKey === i ? -sortDir : 1; sortKey = i; render(); };
     head.appendChild(th);
   });
   let rows = DATA.filter(r => JSON.stringify(r).toLowerCase().includes(q));
-  if (sortKey) rows.sort((a, b) => fmt(get(a, sortKey)).localeCompare(fmt(get(b, sortKey))) * sortDir);
+  if (sortKey !== null){
+    const k = COLS[sortKey][0];
+    rows.sort((a, b) => fmt(cell(a, k)).localeCompare(fmt(cell(b, k))) * sortDir);
+  }
 
   const body = $("body"); body.innerHTML = "";
   rows.forEach(r => {
@@ -148,7 +152,7 @@ function render(){
     }
     tr.append(vtd, wtd);
     COLS.forEach(([k, , cls]) => {
-      const td = document.createElement("td"); td.textContent = fmt(get(r, k));
+      const td = document.createElement("td"); td.textContent = fmt(cell(r, k));
       if (cls) td.className = cls; tr.appendChild(td);
     });
     body.appendChild(tr);
@@ -188,6 +192,8 @@ function load(doc){
     return;
   }
   $("ver").textContent = doc.schema_version;
+  const note = newerDataNote(doc);
+  if (note){ $("loaderr").hidden = false; $("loaderr").className = "note"; $("loaderr").textContent = note; }
   DATA = doc.toolchains;
   render();
 }

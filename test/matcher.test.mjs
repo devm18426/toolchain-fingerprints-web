@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { matchRecord, parseTargetText, schemaProblem, vcmp, COLS, get } from "../site/matcher.js";
+import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt } from "../site/matcher.js";
 
 const load = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const fixture = load("./fixtures/fingerprints.json");
@@ -83,6 +83,41 @@ test("pinned dataset: loads, unique ids, every rule runs on every record", { ski
                                     endian: "little", machine: "ARM", glibc: "2.36"})];
   for (const r of doc.toolchains){
     for (const t of profiles) assert.ok(["OK", "RISKY", "NO"].includes(matchRecord(r, t).verdict), r.tc_id);
-    for (const [k] of COLS) get(r, k);          // every column path resolves without throwing
+    for (const [k] of COLS) fmt(cell(r, k));    // every column resolves without throwing
   }
+});
+
+// ---- forward compatibility: data from a later 2.x generator ------------------
+test("a newer 2.x record with unknown fields and enum values still matches", () => {
+  const base = byId["mips32-uclibc-2026.08"];
+  const future = {
+    ...base,
+    some_future_field: {x: 1},
+    libc: {...base.libc, kind: "bionic"},
+    time: {...base.time, time64_syscalls: "partial"},
+    float_abi: "quad",
+    hash_style: "gnu+dt_relr",
+    arch: {family: "loongarch", abi: {lp64: "d", new_flag: true}},
+  };
+  const r = matchRecord(future, OLD_MIPS);
+  assert.ok(["OK", "RISKY", "NO"].includes(r.verdict));
+  assert.ok(!r.reasons.some(x => /_time64/.test(x.text)));   // unknown value: no time64 rule fires
+  for (const [k] of COLS) fmt(cell(future, k));
+  assert.equal(fmt(cell(future, COLS.find(c => c[1] === "arch ABI")[0])), "lp64=d, new_flag=true");
+});
+
+test("older 2.1/2.2 records without arch fall back to mips/arm", () => {
+  const {arch, ...old} = byId["mips32-uclibc-2017.11"];
+  const col = name => COLS.find(c => c[1] === name)[0];
+  assert.equal(cell(old, col("arch")), "mips");
+  assert.match(fmt(cell(old, col("arch ABI"))), /isa_level=mips32/);
+  const {needed_corpus, time, kernel, arch: _a, mips, ...v20} = byId["mips32-uclibc-2017.11"];
+  assert.ok(matchRecord(v20, OLD_MIPS));                        // 2.0-shaped record: no crash
+});
+
+test("newer minor versions load with a note; newer majors are refused", () => {
+  assert.equal(schemaProblem({schema_version: "2.9", toolchains: []}), null);
+  assert.match(newerDataNote({schema_version: "2.9"}), /newer than this page/);
+  assert.equal(newerDataNote(fixture), null);
+  assert.ok(schemaProblem({schema_version: "3.0", toolchains: []}));
 });
