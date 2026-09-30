@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt } from "../site/matcher.js";
+import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily } from "../site/matcher.js";
 
 const load = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const fixture = load("./fixtures/fingerprints.json");
@@ -120,4 +120,49 @@ test("newer minor versions load with a note; newer majors are refused", () => {
   assert.match(newerDataNote({schema_version: "2.9"}), /newer than this page/);
   assert.equal(newerDataNote(fixture), null);
   assert.ok(schemaProblem({schema_version: "3.0", toolchains: []}));
+});
+
+// ---- machine families, ELF class, robustness, unknown fields ----------------
+test("machine names from readelf, uname -m and arch.family agree", () => {
+  for (const [name, fam] of [["MIPS R3000", "mips"], ["mipsel", "mips"], ["mips64", "mips"], ["ARM", "arm"],
+                             ["armv7l", "arm"], ["AArch64", "aarch64"], ["arm64", "aarch64"],
+                             ["Advanced Micro Devices X86-64", "x86_64"], ["x86_64", "x86_64"], ["Intel 80386", "x86"],
+                             ["i686", "x86"], ["RISC-V", "riscv"], ["riscv64", "riscv"], ["PowerPC64", "power"],
+                             ["ppc64le", "power"], ["LoongArch", "loongarch"], ["IBM S/390", "ibm"]])
+    assert.equal(machineFamily(name), fam, name);
+  const mips = byId["mips32-uclibc-2017.11"];
+  assert.equal(matchRecord(mips, target({machine: "mips"})).verdict, "OK");
+  const arm = byId["armv7-eabihf-musl-2026.08"];
+  assert.equal(matchRecord(arm, target({machine: "armv7l"})).verdict, "OK");
+  assert.equal(matchRecord(arm, target({machine: "mips"})).verdict, "NO");
+  // 32-bit ARM on a 64-bit ARM target may work: RISKY, not NO
+  const onA64 = matchRecord(arm, target({machine: "aarch64"}));
+  assert.equal(onA64.verdict, "RISKY");
+  assert.match(onA64.reasons[0].text, /32-bit/);
+});
+
+test("ELF class: 64-bit binaries on a 32-bit userland are NO, the reverse is RISKY", () => {
+  const m32 = byId["mips32-musl-2026.08"];
+  const m64 = {...m32, elf: {...m32.elf, class: "64"}};
+  assert.equal(matchRecord(m64, target({machine: "MIPS R3000", class: "ELF32"})).verdict, "NO");
+  assert.equal(matchRecord(m32, target({machine: "MIPS R3000", class: "ELF64"})).verdict, "RISKY");
+  assert.equal(matchRecord(m32, target({class: "ELF32"})).verdict, "OK");
+  assert.equal(parseTargetText("  Class:                             ELF64\n").class, "ELF64");
+});
+
+test("a record that breaks a rule gets RISKY instead of breaking every verdict", () => {
+  const {ldso, needed_corpus, ...broken} = byId["mips32-uclibc-2017.11"];
+  const bad = {...broken, elf: null};
+  const r = matchRecord(bad, OLD_MIPS);
+  assert.ok(["RISKY", "NO"].includes(r.verdict));
+  assert.ok(r.reasons.some(x => /could not run/.test(x.text)));
+  assert.equal(matchRecord(byId["mips32-uclibc-2017.11"], OLD_MIPS).verdict, "OK");
+});
+
+test("fields no column covers become extra columns; known subtrees do not", () => {
+  const rec = {...byId["mips32-uclibc-2017.11"], new_top: 1, new_obj: {a: "x", b: {c: true}},
+               arch: {family: "mips", abi: {brand_new: 1}}, raw: {extra: "y"}};
+  const extra = extraCols([rec, byId["mips32-glibc-2026.08"]]).map(c => c[0]);
+  assert.deepEqual(extra, ["new_top", "new_obj.a", "new_obj.b.c"]);
+  assert.deepEqual(extraCols(fixture.toolchains), []);          // everything current has a column
 });

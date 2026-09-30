@@ -43,6 +43,8 @@
   th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
   th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
   td.mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem}
+  td.list{white-space:normal;min-width:260px;max-width:420px}
+  th.extra{font-style:italic}
   td.why{white-space:normal;min-width:240px;max-width:420px;font-size:.8rem}
   td.why ul{margin:0;padding-left:16px}
   td.why li.no{color:var(--no)} td.why li.risk{color:var(--risk)} td.why li.info{color:var(--muted)}
@@ -94,11 +96,11 @@
 
 <script type="module">
 import {
-  COLS, TARGET, cell, splitList, fmt, matchRecord, schemaProblem, newerDataNote, parseTargetText,
+  COLS, TARGET, cell, splitList, fmt, matchRecord, schemaProblem, newerDataNote, parseTargetText, extraCols,
 } from "./matcher.js";
 
 // ---- UI --------------------------------------------------------------------
-let DATA = [], sortKey = null, sortDir = 1, results = {};
+let DATA = [], cols = COLS, sortKey = null, sortDir = 1, results = {};
 const $ = id => document.getElementById(id);
 
 function buildTargetFields(){
@@ -123,14 +125,15 @@ function render(){
   const q = $("q").value.toLowerCase();
   const head = $("head"); head.innerHTML = "";
   ["match", "why"].forEach(h => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
-  COLS.forEach(([k, label], i) => {
+  cols.forEach(([k, label, cls], i) => {
     const th = document.createElement("th"); th.textContent = label;
+    if (cls === "extra"){ th.className = "extra"; th.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
     th.onclick = () => { sortDir = sortKey === i ? -sortDir : 1; sortKey = i; render(); };
     head.appendChild(th);
   });
   let rows = DATA.filter(r => JSON.stringify(r).toLowerCase().includes(q));
   if (sortKey !== null){
-    const k = COLS[sortKey][0];
+    const k = cols[sortKey][0];
     rows.sort((a, b) => fmt(cell(a, k)).localeCompare(fmt(cell(b, k))) * sortDir);
   }
 
@@ -151,7 +154,7 @@ function render(){
       }
     }
     tr.append(vtd, wtd);
-    COLS.forEach(([k, , cls]) => {
+    cols.forEach(([k, , cls]) => {
       const td = document.createElement("td"); td.textContent = fmt(cell(r, k));
       if (cls) td.className = cls; tr.appendChild(td);
     });
@@ -177,6 +180,7 @@ function parseRaw(){
   set("kernel", f.kernel, "kernel");
   set("endian", f.endian, "endian");
   set("machine", f.machine, "machine");
+  set("class", f.class, "class");
   set("glibc", f.glibc, "glibc");
   if (prov.size > before) notes.push((prov.size - before) + " soname(s)");
   $("parseout").textContent = notes.length ? "parsed: " + notes.join(", ") : "nothing recognized";
@@ -195,6 +199,12 @@ function load(doc){
   const note = newerDataNote(doc);
   if (note){ $("loaderr").hidden = false; $("loaderr").className = "note"; $("loaderr").textContent = note; }
   DATA = doc.toolchains;
+  cols = [...COLS, ...extraCols(DATA)];
+  // Offer the dataset's own machine names; uname -m names work too.
+  const dl = document.createElement("datalist"); dl.id = "machines";
+  [...new Set(DATA.map(r => r.elf && r.elf.machine).filter(Boolean))].sort()
+    .forEach(m => { const o = document.createElement("option"); o.value = m; dl.appendChild(o); });
+  document.body.appendChild(dl); $("t_machine").setAttribute("list", "machines");
   render();
 }
 
