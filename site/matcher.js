@@ -63,6 +63,7 @@ export const cell = (r, key) => typeof key === "function" ? key(r) : get(r, key)
 // readelf's Machine text, uname -m and schema 2.3's arch.family all name the
 // same thing differently. Unrecognized names become their first word, lowercased,
 // which is what the generator puts in arch.family for machines it does not know.
+// Same table as FAMILIES in the generator's normalize.py; keep them in sync.
 const FAMILIES = [
   [/^(x86[-_]64|amd64|advanced micro devices x86-64)/, "x86_64"],
   [/^(i[3-6]86|x86$|intel 80386)/, "x86"],
@@ -72,6 +73,17 @@ const FAMILIES = [
   [/^risc-?v/, "riscv"],
   [/^(ppc|powerpc|power)/, "power"],
   [/^loongarch/, "loongarch"],
+  [/^(mc68|m68k|coldfire)/, "m68k"],
+  [/^(xilinx microblaze|microblaze)/, "microblaze"],
+  [/^(altera nios|nios2)/, "nios2"],
+  [/^(openrisc|or1k)/, "openrisc"],
+  [/^(ibm s\/390|s390)/, "s390"],
+  [/^(renesas \/ superh|superh|sh\d|sh$)/, "sh"],
+  [/^sparc/, "sparc"],
+  [/^(tensilica xtensa|xtensa)/, "xtensa"],
+  [/^(arcv2|arcompact|arc)/, "arc"],
+  [/^(analog devices blackfin|blackfin|bfin)/, "blackfin"],
+  [/^(c-sky|csky)/, "csky"],
 ];
 export function machineFamily(name){
   const s = String(name || "").trim().toLowerCase();
