@@ -20,6 +20,8 @@
     --card:#1c2126; --ok:#7ee2a8; --okbg:#12301f; --no:#f2a9a2; --nobg:#3a1614;
     --risk:#e8c65b; --riskbg:#332a0d; --accent:#7ca8f5;
   }
+  /* native widgets (scrollbars, inputs) follow the theme */
+  :root{color-scheme:light dark} :root[data-theme="light"]{color-scheme:light} :root[data-theme="dark"]{color-scheme:dark}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:0 16px}
   .wrap{max-width:1280px;margin:0 auto;padding:24px 0 64px}
@@ -39,6 +41,11 @@
   button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
   button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
   .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  .tablewrap{scrollbar-color:var(--muted) var(--card)}
+  .tablewrap::-webkit-scrollbar{height:10px;width:10px}
+  .tablewrap::-webkit-scrollbar-track{background:var(--card)}
+  .tablewrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px;border:2px solid var(--card)}
+  .tablewrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
   table{border-collapse:collapse;width:100%;font-size:.85rem}
   th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
   th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
