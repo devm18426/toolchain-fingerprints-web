@@ -2,7 +2,9 @@ name: bump-data
 
 # toolchain-fingerprints sends a data-release dispatch after each release.
 # Pin data.lock to it in a PR (App token, so CI runs on the PR), and let it
-# auto-merge once the tests pass. Can also be run by hand with a tag.
+# auto-merge once CI's tests pass. Can also be run by hand with a tag.
+# A newer bump replaces any older bump PR that is still open, since both
+# edit the same lines of data.lock.
 
 on:
   repository_dispatch:
@@ -27,15 +29,6 @@ jobs:
     env:
       TAG: ${{ github.event.client_payload.tag || inputs.tag }}
     steps:
-      - name: Check the tag
-        run: |
-          if [ -z "$TAG" ]; then
-            repo=$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/data.lock" | python3 -c 'import json,sys; print(json.load(sys.stdin)["repo"])')
-            TAG=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
-            echo "TAG=$TAG" >> "$GITHUB_ENV"
-            echo "latest release: $TAG"
-          fi
-          [[ "$TAG" =~ ^data-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag: $TAG"; exit 1; }
       - id: app
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
@@ -46,10 +39,20 @@ jobs:
           token: ${{ steps.app.outputs.token }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: 22 }
-      - name: Pin data.lock and test against the new data
+      - name: Check the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          node scripts/fetch-data.mjs --update "$TAG"
-          npm test
+          if [ -z "$TAG" ]; then
+            repo=$(node -p 'JSON.parse(require("fs").readFileSync("data.lock", "utf8")).repo')
+            TAG=$(gh api "repos/$repo/releases/latest" --jq .tag_name)
+            echo "TAG=$TAG" >> "$GITHUB_ENV"
+            echo "latest release: $TAG"
+          fi
+          [[ "$TAG" =~ ^data-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag: $TAG"; exit 1; }
+      # Checks the download's schema major; the PR's CI runs the tests.
+      - name: Pin data.lock
+        run: node scripts/fetch-data.mjs --update "$TAG"
       - name: Open the PR (auto-merges when CI is green)
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -63,8 +66,19 @@ jobs:
           branch="data/$TAG"
           git switch -c "$branch"
           git commit -am "Use dataset $TAG"
-          git push -u origin "$branch"
-          repo=$(node -p 'JSON.parse(require("fs").readFileSync("data.lock", "utf8")).repo')
-          url=$(gh pr create --title "Use dataset $TAG" --head "$branch" \
-                --body "Pins \`data.lock\` to [$TAG](https://github.com/$repo/releases/tag/$TAG).")
-          gh pr merge "$url" --auto --squash
+          # --force: a rerun for the same tag replaces its earlier branch.
+          git push --force -u origin "$branch"
+          url=$(gh pr list --head "$branch" --state open --json url --jq '.[0].url // ""')
+          if [ -z "$url" ]; then
+            repo=$(node -p 'JSON.parse(require("fs").readFileSync("data.lock", "utf8")).repo')
+            url=$(gh pr create --title "Use dataset $TAG" --head "$branch" \
+                  --body "Pins \`data.lock\` to [$TAG](https://github.com/$repo/releases/tag/$TAG).")
+          fi
+          gh pr list --state open --json number,headRefName \
+            --jq ".[] | select(.headRefName | startswith(\"data/\")) | select(.headRefName != \"$branch\") | .number" |
+          while read -r n; do
+            gh pr close "$n" --delete-branch --comment "Superseded by $url"
+          done
+          gh pr merge "$url" --auto --squash || {
+            echo "::error::Opened $url but could not turn on auto-merge. Turn on Settings > General > Allow auto-merge, then merge the PR."
+            exit 1; }
