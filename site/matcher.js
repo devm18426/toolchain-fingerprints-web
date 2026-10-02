@@ -28,7 +28,7 @@ export const COLS = [
   ["kernel.headers", "kernel headers"], ["kernel.min", "min kernel"],
   ["glibc.requires", "needs GLIBC_"], ["glibc.provides", "has GLIBC_"],
   ["pie_default", "PIE"], ["hash_style", "hash"], ["interp", "interp"],
-  ["needed", "needed (hello)"], ["needed_corpus", "needed (real programs)"],
+  ["needed", "needed (minimal)"], ["needed_corpus", "needed (typical)"],
   ["ldso.soname", "ldso soname"], ["libc.soname", "libc soname"],
   ["dynamic_ok", "dynamic"], ["static_ok", "static"], ["cxx_ok", "C++"],
   ["sysroot_sonames", "sysroot sonames", "list"],
