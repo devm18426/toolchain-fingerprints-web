@@ -130,7 +130,9 @@ test("machine names from readelf, uname -m and arch.family agree", () => {
                              ["i686", "x86"], ["RISC-V", "riscv"], ["riscv64", "riscv"], ["PowerPC64", "power"],
                              ["ppc64le", "power"], ["LoongArch", "loongarch"], ["IBM S/390", "s390"],
                              ["s390x", "s390"], ["Renesas / SuperH SH", "sh"], ["sh4", "sh"],
-                             ["Tensilica Xtensa Processor", "xtensa"], ["Some Future CPU", "some"]])
+                             ["Tensilica Xtensa Processor", "xtensa"], ["Some Future CPU", "some"],
+                             ["Tilera TILE-Gx multicore architecture family", "tilegx"], ["tilegx", "tilegx"],
+                             ["Tilera TILEPro multicore architecture family", "tilepro"], ["tilepro", "tilepro"]])
     assert.equal(machineFamily(name), fam, name);
   const mips = byId["mips32-uclibc-2017.11"];
   assert.equal(matchRecord(mips, target({machine: "mips"})).verdict, "OK");

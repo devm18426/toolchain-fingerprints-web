@@ -97,6 +97,8 @@ const FAMILIES = [
   [/^(arcv2|arcompact|arc)/, "arc"],
   [/^(analog devices blackfin|blackfin|bfin)/, "blackfin"],
   [/^(c-sky|csky)/, "csky"],
+  [/^(tilera tile-gx|tilegx)/, "tilegx"],
+  [/^(tilera tilepro|tilepro)/, "tilepro"],
 ];
 export function machineFamily(name){
   const s = String(name || "").trim().toLowerCase();
