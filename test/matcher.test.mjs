@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily } from "../site/matcher.js";
+import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily, imageRef, verdictRank } from "../site/matcher.js";
 
 const load = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const fixture = load("./fixtures/fingerprints.json");
@@ -167,4 +167,16 @@ test("fields no column covers become extra columns; known subtrees do not", () =
   const extra = extraCols([rec, byId["mips32-glibc-2026.08"]]).map(c => c[0]);
   assert.deepEqual(extra, ["new_top", "new_obj.a", "new_obj.b.c"]);
   assert.deepEqual(extraCols(fixture.toolchains), []);          // everything current has a column
+});
+
+test("imageRef pins the probed image by tag and digest", () => {
+  const d = "sha256:" + "a".repeat(64);
+  assert.equal(imageRef({tc_id: "x-1", provenance: {image_digest: "ghcr.io/o/r@" + d}}), "ghcr.io/o/r:x-1@" + d);
+  assert.equal(imageRef({tc_id: "x-1", provenance: {}}), "");
+  assert.equal(imageRef({tc_id: "x-1"}), "");
+});
+
+test("verdicts order OK, RISKY, NO, then rows without a verdict", () => {
+  const ranks = ["NO", "OK", undefined, "RISKY"].map(v => verdictRank(v && {verdict: v}));
+  assert.deepEqual(ranks, [2, 0, 3, 1]);
 });

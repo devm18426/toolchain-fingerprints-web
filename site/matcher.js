@@ -20,18 +20,18 @@ export const fmt = v => v === "" || v == null ? "—" : Array.isArray(v) ? (v.le
 // path, or a function for values that need a fallback for older data. Fields added in a
 // minor schema version may be missing from older data; they show as "—".
 export const COLS = [
-  ["tc_id", "toolchain"], ["triple", "triple", "mono"], ["libc.kind", "libc"],
+  ["tc_id", "toolchain"], ["triple", "triple"], ["libc.kind", "libc"],
   ["libc.version", "libc ver"], ["gcc_version", "gcc"],
   ["elf.machine", "machine"], ["elf.class", "class"], ["elf.endian", "endian"], ["march", "-march"], ["isa", "isa"],
   ["float_abi", "float"], [archFamily, "arch"], [archAbi, "arch ABI"],
   ["time.time_t_bits", "time_t bits"], ["time.time64_syscalls", "time64 syscalls"],
   ["kernel.headers", "kernel headers"], ["kernel.min", "min kernel"],
   ["glibc.requires", "needs GLIBC_"], ["glibc.provides", "has GLIBC_"],
-  ["pie_default", "PIE"], ["hash_style", "hash"], ["interp", "interp", "mono"],
-  ["needed", "needed (hello)", "mono"], ["needed_corpus", "needed (real programs)", "mono"],
-  ["ldso.soname", "ldso soname", "mono"], ["libc.soname", "libc soname", "mono"],
+  ["pie_default", "PIE"], ["hash_style", "hash"], ["interp", "interp"],
+  ["needed", "needed (hello)"], ["needed_corpus", "needed (real programs)"],
+  ["ldso.soname", "ldso soname"], ["libc.soname", "libc soname"],
   ["dynamic_ok", "dynamic"], ["static_ok", "static"], ["cxx_ok", "C++"],
-  ["sysroot_sonames", "sysroot sonames", "mono list"],
+  ["sysroot_sonames", "sysroot sonames", "list"],
 ];
 
 // Field paths the curated columns already cover (whole subtrees for prefixes),
@@ -58,6 +58,19 @@ export function extraCols(records){
 function archFamily(r){ return r.arch ? r.arch.family : r.mips ? "mips" : r.arm ? "arm" : ""; }
 function archAbi(r){ return r.arch ? r.arch.abi : r.mips || r.arm || null; }
 export const cell = (r, key) => typeof key === "function" ? key(r) : get(r, key);
+
+// ---- images and verdict order ------------------------------------------------
+// The image a record was probed from, as tag@digest: readable, and pinned to
+// exactly the image the record describes even if the tag later moves.
+export function imageRef(r){
+  const d = r && r.provenance && r.provenance.image_digest;
+  const m = /^(.+)@(sha256:[0-9a-f]{64})$/.exec(d || "");
+  return m ? `${m[1]}:${r.tc_id}@${m[2]}` : "";
+}
+
+// Best verdict first; rows without a verdict last.
+export const VERDICT_ORDER = ["OK", "RISKY", "NO"];
+export const verdictRank = res => res ? VERDICT_ORDER.indexOf(res.verdict) : VERDICT_ORDER.length;
 
 // ---- machine families --------------------------------------------------------
 // readelf's Machine text, uname -m and schema 2.3's arch.family all name the

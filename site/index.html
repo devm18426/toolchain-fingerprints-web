@@ -42,10 +42,14 @@
   table{border-collapse:collapse;width:100%;font-size:.85rem}
   th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
   th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
-  td.mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem}
-  td.list{white-space:normal;min-width:260px;max-width:420px}
+  /* every data cell looks the same; only the prose "why" column differs */
+  td,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem}
+  td.list details summary{cursor:pointer;color:var(--accent)}
+  td.list details[open]{white-space:normal;min-width:260px;max-width:420px}
+  th .arrow{color:var(--muted);font-weight:400}
+  button.copy{padding:2px 8px;font-size:.75rem;font-weight:600}
   th.extra{font-style:italic}
-  td.why{white-space:normal;min-width:240px;max-width:420px;font-size:.8rem}
+  td.why{white-space:normal;min-width:240px;max-width:420px;font:.8rem/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   td.why ul{margin:0;padding-left:16px}
   td.why li.no{color:var(--no)} td.why li.risk{color:var(--risk)} td.why li.info{color:var(--muted)}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
@@ -81,7 +85,8 @@
         <span class="hint" id="parseout" style="margin:0"></span>
       </div>
     </details>
-    <div class="hint">Each row is <b class="badge b-ok">OK</b>, <b class="badge b-risk">RISKY</b> or <b class="badge b-no">NO</b>, with the reasons listed next to it. Rules only fire for target facts you filled in.</div>
+    <div class="hint">Each row is <b class="badge b-ok">OK</b>, <b class="badge b-risk">RISKY</b> or <b class="badge b-no">NO</b>, with the reasons listed next to it, best first. Rules only fire for target facts you filled in.
+      The <b>image</b> column copies the <code>docker pull</code> command for the exact toolchain image each row was measured from.</div>
   </div>
 
   <div class="row" style="margin-bottom:10px">
@@ -97,6 +102,7 @@
 <script type="module">
 import {
   COLS, TARGET, cell, splitList, fmt, matchRecord, schemaProblem, newerDataNote, parseTargetText, extraCols,
+  imageRef, verdictRank,
 } from "./matcher.js";
 
 // ---- UI --------------------------------------------------------------------
@@ -124,17 +130,28 @@ function readTarget(){
 function render(){
   const q = $("q").value.toLowerCase();
   const head = $("head"); head.innerHTML = "";
-  ["match", "why"].forEach(h => { const th = document.createElement("th"); th.textContent = h; head.appendChild(th); });
+  // sortKey: null = default (verdict, then toolchain), "match" = verdict, or a cols index
+  const th = (label, key) => {
+    const h = document.createElement("th"); h.textContent = label;
+    if (key !== undefined){
+      if (sortKey === key){ const a = document.createElement("span"); a.className = "arrow"; a.textContent = sortDir > 0 ? " ▲" : " ▼"; h.appendChild(a); }
+      h.onclick = () => { sortDir = sortKey === key ? -sortDir : 1; sortKey = key; render(); };
+    }
+    head.appendChild(h); return h;
+  };
+  th("match", "match"); th("why"); th("image");
   cols.forEach(([k, label, cls], i) => {
-    const th = document.createElement("th"); th.textContent = label;
-    if (cls === "extra"){ th.className = "extra"; th.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
-    th.onclick = () => { sortDir = sortKey === i ? -sortDir : 1; sortKey = i; render(); };
-    head.appendChild(th);
+    const h = th(label, i);
+    if (cls === "extra"){ h.classList.add("extra"); h.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
   });
+  const byVerdict = (a, b) => verdictRank(results[a.tc_id]) - verdictRank(results[b.tc_id]);
+  const byId = (a, b) => a.tc_id.localeCompare(b.tc_id);
   let rows = DATA.filter(r => JSON.stringify(r).toLowerCase().includes(q));
-  if (sortKey !== null){
+  if (sortKey === null) rows.sort((a, b) => byVerdict(a, b) || byId(a, b));
+  else if (sortKey === "match") rows.sort((a, b) => byVerdict(a, b) * sortDir || byId(a, b));
+  else {
     const k = cols[sortKey][0];
-    rows.sort((a, b) => fmt(cell(a, k)).localeCompare(fmt(cell(b, k))) * sortDir);
+    rows.sort((a, b) => fmt(cell(a, k)).localeCompare(fmt(cell(b, k)), undefined, {numeric: true}) * sortDir || byVerdict(a, b) || byId(a, b));
   }
 
   const body = $("body"); body.innerHTML = "";
@@ -153,9 +170,22 @@ function render(){
         wtd.appendChild(ul);
       }
     }
-    tr.append(vtd, wtd);
+    const itd = document.createElement("td"), ref = imageRef(r);
+    if (ref){
+      const b = document.createElement("button"); b.className = "ghost copy";
+      b.textContent = "copy pull"; b.title = "docker pull " + ref;
+      b.onclick = () => navigator.clipboard.writeText("docker pull " + ref)
+        .then(() => { b.textContent = "copied"; setTimeout(() => b.textContent = "copy pull", 1500); })
+        .catch(() => prompt("Copy this command:", "docker pull " + ref));
+      itd.appendChild(b);
+    } else itd.textContent = "—";
+    tr.append(vtd, wtd, itd);
     cols.forEach(([k, , cls]) => {
-      const td = document.createElement("td"); td.textContent = fmt(cell(r, k));
+      const td = document.createElement("td"), v = cell(r, k);
+      if (cls === "list" && Array.isArray(v) && v.length){
+        const d = document.createElement("details"), sm = document.createElement("summary");
+        sm.textContent = v.length + " sonames"; d.append(sm, v.join(", ")); td.appendChild(d);
+      } else td.textContent = fmt(v);
       if (cls) td.className = cls; tr.appendChild(td);
     });
     body.appendChild(tr);
