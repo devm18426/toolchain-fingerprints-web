@@ -10,8 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag in the toolchain repo, e.g. data-2.2.0
-        required: true
+        description: Release tag in the toolchain repo, e.g. data-2.3.3 (empty = the latest release)
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -28,6 +29,12 @@ jobs:
     steps:
       - name: Check the tag
         run: |
+          if [ -z "$TAG" ]; then
+            repo=$(curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/data.lock" | python3 -c 'import json,sys; print(json.load(sys.stdin)["repo"])')
+            TAG=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')
+            echo "TAG=$TAG" >> "$GITHUB_ENV"
+            echo "latest release: $TAG"
+          fi
           [[ "$TAG" =~ ^data-[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad tag: $TAG"; exit 1; }
       - id: app
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
@@ -48,7 +55,8 @@ jobs:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           SLUG: ${{ steps.app.outputs.app-slug }}
         run: |
-          if git diff --quiet -- data.lock; then echo "already pinned to $TAG"; exit 0; fi
+          if git diff --quiet -- data.lock; then
+            echo "::warning::data.lock is already pinned to $TAG; nothing to do"; exit 0; fi
           uid=$(gh api "/users/${SLUG}[bot]" --jq .id)
           git config user.name "${SLUG}[bot]"
           git config user.email "${uid}+${SLUG}[bot]@users.noreply.github.com"
