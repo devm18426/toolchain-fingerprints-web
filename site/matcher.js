@@ -99,6 +99,9 @@ const FAMILIES = [
   [/^(c-sky|csky)/, "csky"],
   [/^(tilera tile-gx|tilegx)/, "tilegx"],
   [/^(tilera tilepro|tilepro)/, "tilepro"],
+  [/^(intel ia-64|ia64)/, "ia64"],
+  [/^alpha/, "alpha"],
+  [/^(hppa|parisc)/, "parisc"],                  // readelf says HPPA, uname -m says parisc/parisc64
 ];
 export function machineFamily(name){
   const s = String(name || "").trim().toLowerCase();
