@@ -299,7 +299,7 @@ export function matchRecord(r, t){
 export function newerDataNote(doc){
   const minor = parseInt(String(doc && doc.schema_version || "").split(".")[1], 10);
   return minor > KNOWN_MINOR
-    ? `This dataset is schema ${doc.schema_version}, newer than this page (${SUPPORTED_MAJOR}.${KNOWN_MINOR}). Verdicts are still valid; fields this page does not know yet are shown as extra columns at the right, and no rule uses them.`
+    ? "This data includes some new details this page doesn't use yet. Matching works as usual; the new details are shown as extra columns on the right."
     : null;
 }
 

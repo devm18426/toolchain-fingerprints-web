@@ -123,7 +123,7 @@ test("older 2.1/2.2 records without arch fall back to mips/arm", () => {
 
 test("newer minor versions load with a note; newer majors are refused", () => {
   assert.equal(schemaProblem({schema_version: "2.9", toolchains: []}), null);
-  assert.match(newerDataNote({schema_version: "2.9"}), /newer than this page/);
+  assert.match(newerDataNote({schema_version: "2.9"}), /new details/);
   assert.equal(newerDataNote(fixture), null);
   assert.ok(schemaProblem({schema_version: "3.0", toolchains: []}));
 });
@@ -279,5 +279,5 @@ test("2.4/2.5 fields have columns; fields added under them later still become ex
   assert.deepEqual(extraCols([rec]).map(c => c[0]).sort(), ["binary.future", "probe.future"]);
   assert.equal(KNOWN_MINOR, 5);
   assert.equal(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.5`}), null);
-  assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), /newer than this page \(2\.5\)/);
+  assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), /extra columns/);
 });
