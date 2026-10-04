@@ -8,65 +8,104 @@
   :root{
     --bg:#ffffff; --fg:#1a1d21; --muted:#5b6570; --line:#e2e6ea;
     --card:#f6f8fa; --ok:#137333; --okbg:#e6f4ea; --no:#a50e0e; --nobg:#fce8e6;
-    --risk:#8a6d00; --riskbg:#fff4d6; --accent:#0b57d0;
+    --risk:#8a6d00; --riskbg:#fff4d6; --accent:#0b57d0; --accentbg:#e8f0fe;
+    --na:#6b7480; --nabg:#eceff2;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
   @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
     --bg:#14171a; --fg:#e6e9ec; --muted:#9aa4ae; --line:#2b3138;
     --card:#1c2126; --ok:#7ee2a8; --okbg:#12301f; --no:#f2a9a2; --nobg:#3a1614;
-    --risk:#e8c65b; --riskbg:#332a0d; --accent:#7ca8f5;
+    --risk:#e8c65b; --riskbg:#332a0d; --accent:#7ca8f5; --accentbg:#1b2a44;
+    --na:#8a949e; --nabg:#262c32;
   }}
   :root[data-theme="dark"]{
     --bg:#14171a; --fg:#e6e9ec; --muted:#9aa4ae; --line:#2b3138;
     --card:#1c2126; --ok:#7ee2a8; --okbg:#12301f; --no:#f2a9a2; --nobg:#3a1614;
-    --risk:#e8c65b; --riskbg:#332a0d; --accent:#7ca8f5;
+    --risk:#e8c65b; --riskbg:#332a0d; --accent:#7ca8f5; --accentbg:#1b2a44;
+    --na:#8a949e; --nabg:#262c32;
   }
   /* native widgets (scrollbars, inputs) follow the theme */
   :root{color-scheme:light dark} :root[data-theme="light"]{color-scheme:light} :root[data-theme="dark"]{color-scheme:dark}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:0 16px}
-  .wrap{max-width:1280px;margin:0 auto;padding:24px 0 64px}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);padding:0 16px}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 0 64px}
   h1{font-size:1.5rem;margin:0 0 4px}
   p.sub{color:var(--muted);margin:0 0 20px}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:20px}
-  .panel h2{font-size:1rem;margin:0 0 12px}
-  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
-  .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px}
-  label{font-size:.8rem;color:var(--muted)}
-  input,select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font:inherit;font-size:.9rem}
-  input[type=search]{width:100%}
-  textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;resize:vertical}
-  details.rawbox{margin-top:14px}
-  details.rawbox summary{cursor:pointer;color:var(--accent);font-size:.85rem;margin-bottom:8px}
-  .hint{font-size:.78rem;color:var(--muted);margin-top:6px}
-  button{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+  a{color:var(--accent)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+  .panel h2{font-size:1rem;margin:0 0 10px}
+  textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;font:.8rem/1.4 var(--mono);resize:vertical}
+  input,select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit;font-size:.85rem;min-width:0}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  button{background:var(--accent);color:var(--bg);border:0;border-radius:7px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
   button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
-  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
-  .tablewrap{scrollbar-color:var(--muted) var(--card)}
-  .tablewrap::-webkit-scrollbar{height:10px;width:10px}
-  .tablewrap::-webkit-scrollbar-track{background:var(--card)}
-  .tablewrap::-webkit-scrollbar-thumb{background:var(--line);border-radius:999px;border:2px solid var(--card)}
-  .tablewrap::-webkit-scrollbar-thumb:hover{background:var(--muted)}
-  table{border-collapse:collapse;width:100%;font-size:.85rem}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
-  th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
-  /* every data cell looks the same; only the prose "why" column differs */
-  td,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.8rem}
-  td.list details summary{cursor:pointer;color:var(--accent)}
-  td.list details[open]{white-space:normal;min-width:260px;max-width:420px}
-  th .arrow{color:var(--muted);font-weight:400}
-  button.copy{padding:2px 8px;font-size:.75rem;font-weight:600}
-  th.extra{font-style:italic}
-  td.why{white-space:normal;min-width:240px;max-width:420px;font:.8rem/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  td.why ul{margin:0;padding-left:16px}
-  td.why li.no{color:var(--no)} td.why li.risk{color:var(--risk)} td.why li.info{color:var(--muted)}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
-  .b-ok{background:var(--okbg);color:var(--ok)} .b-no{background:var(--nobg);color:var(--no)} .b-risk{background:var(--riskbg);color:var(--risk)}
-  .b-skip{background:var(--card);color:var(--muted);border:1px dashed var(--muted)}
-  td.ph{color:var(--muted)}
-  .count{color:var(--muted);font-size:.85rem;margin:10px 2px}
+  button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hint{font-size:.78rem;color:var(--muted)}
   .error{background:var(--nobg);color:var(--no);border-radius:10px;padding:12px 16px;margin-bottom:20px}
   .note{background:var(--riskbg);color:var(--risk);border-radius:10px;padding:12px 16px;margin-bottom:20px}
-  a{color:var(--accent)}
+
+  /* target facts: one summary line, fields behind it */
+  .factbox{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .factbox summary{cursor:pointer;list-style:none;font:.8rem var(--mono);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .factbox summary::-webkit-details-marker{display:none}
+  .factbox .edit{font:600 .78rem var(--sans);color:var(--accent)}
+  .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:10px}
+  .facts label{display:flex;flex-direction:column;gap:2px;font-size:.72rem;color:var(--muted)}
+  .facts input{font-family:var(--mono);font-size:.78rem}
+
+  /* verdict counts (also the verdict filter), then the other filters */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin:4px 0 8px}
+  .summary{display:flex;flex-wrap:wrap;gap:8px}
+  .stat{display:flex;align-items:baseline;gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 12px;background:var(--bg);color:var(--fg);font-weight:400}
+  .stat b{font-size:1.15rem;font-variant-numeric:tabular-nums}
+  .stat[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .stat.OK b{color:var(--ok)} .stat.RISKY b{color:var(--risk)} .stat.NO b{color:var(--no)} .stat.SKIP b,.stat.all b{color:var(--na)}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;flex:1;justify-content:flex-end;min-width:0}
+  .tools input[type=search]{flex:0 1 220px;min-width:120px}
+  .count{color:var(--muted);font-size:.85rem;margin:8px 2px}
+
+  /* one row per target ABI */
+  .groups{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  details.g{border-bottom:1px solid var(--line)}
+  details.g:last-child{border-bottom:0}
+  details.g > summary{list-style:none;display:grid;grid-template-columns:96px minmax(0,2.4fr) minmax(0,2.4fr) 140px;gap:10px;align-items:center;padding:8px 12px;cursor:pointer}
+  details.g > summary::-webkit-details-marker{display:none}
+  details.g > summary:hover, details.g[open] > summary{background:var(--card)}
+  .name{font:600 .82rem var(--mono);overflow-wrap:anywhere}
+  .name small{display:block;font:400 .72rem var(--sans);color:var(--muted)}
+  .why1{font-size:.78rem;color:var(--muted)}
+  .why1.NO{color:var(--no)} .why1.RISKY{color:var(--risk)}
+  .n{font-size:.78rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  @media (max-width:760px){
+    details.g > summary{grid-template-columns:96px minmax(0,1fr)}
+    details.g > summary > .why1, details.g > summary > .n{grid-column:2;text-align:left}
+  }
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:700;text-align:center}
+  .b-OK{background:var(--okbg);color:var(--ok)} .b-NO{background:var(--nobg);color:var(--no)} .b-RISKY{background:var(--riskbg);color:var(--risk)}
+  .b-SKIP{background:var(--card);color:var(--muted);border:1px dashed var(--muted)} .b-none{background:var(--nabg);color:var(--na)}
+  .ruled{margin-top:14px}
+  .ruled > summary{cursor:pointer;color:var(--accent);font-size:.88rem;padding:6px 2px}
+  .empty{padding:16px;color:var(--muted);font-size:.88rem}
+
+  /* inside a row: its toolchains, then every field */
+  .detail{padding:4px 12px 14px}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;scrollbar-color:var(--muted) var(--card)}
+  table{border-collapse:collapse;width:100%;font:.76rem var(--mono)}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+  th{background:var(--card);font:600 .72rem var(--sans);color:var(--muted)}
+  tr:last-child td{border-bottom:0}
+  td.diff{background:var(--accentbg)}
+  td.ph{color:var(--muted)}
+  td.why{white-space:normal;min-width:240px;font:.76rem/1.4 var(--sans)}
+  td.why ul{margin:0;padding-left:14px}
+  td.why li.no{color:var(--no)} td.why li.risk{color:var(--risk)} td.why li.info{color:var(--muted)}
+  td.list{white-space:normal;min-width:260px;max-width:420px}
+  th.extra{font-style:italic}
+  button.copy{padding:1px 8px;font-size:.72rem}
+  .more{margin-top:8px;font-size:.8rem}
+  .more summary{cursor:pointer;color:var(--accent)}
+  .more .tw{margin-top:6px}
 </style>
 </head>
 <body>
@@ -76,59 +115,67 @@
   <div id="loaderr" class="error" hidden></div>
 
   <div class="panel">
-    <h2>Match a target</h2>
-    <div class="row" id="targetfields"></div>
-    <div class="row" style="margin-top:12px">
-      <button id="match">Match</button>
-      <button class="ghost" id="clear">Clear</button>
-    </div>
-    <details class="rawbox">
-      <summary>… or paste raw output from the target</summary>
-      <textarea id="raw" rows="7" placeholder="Paste any of these, from the target or from a binary that already runs on it:
+    <h2>Paste from the target</h2>
+    <textarea id="raw" rows="6" placeholder="Paste any of these, from the target or from a binary that already runs on it:
 
   readelf -h -l -d /bin/busybox     (interp, NEEDED, endianness, machine)
   file /bin/busybox                 (ELF or BFLT executable)
   ls /lib                           (sonames, and libc-2.x.so for glibc)
   uname -r                          (kernel version)"></textarea>
-      <div class="row" style="margin-top:8px">
-        <button id="parse">Parse into fields</button>
-        <span class="hint" id="parseout" style="margin:0"></span>
-      </div>
+    <div class="row" style="margin-top:8px">
+      <button id="match">Match</button>
+      <button class="ghost" id="clear">Clear</button>
+      <span class="hint" id="parseout"></span>
+    </div>
+    <details class="factbox" id="factbox">
+      <summary><span id="factline">No target facts yet</span> <span class="edit">Edit</span></summary>
+      <div class="facts" id="facts"></div>
+      <div class="hint" style="margin-top:6px">Filled from the paste. Edit any field and press Match; rules only fire for facts you fill in.</div>
     </details>
-    <div class="hint">Each row is <b class="badge b-ok">OK</b>, <b class="badge b-risk">RISKY</b> or <b class="badge b-no">NO</b>, with the reasons listed next to it, best first. Rules only fire for target facts you filled in.
-      Toolchains whose compiler ran but compiled nothing are marked <b class="badge b-skip">compile failed</b> and never matched; their compiler-derived columns show <code>—</code>.
-      No-MMU toolchains produce bFLT (uClinux flat) binaries: they run only on bFLT targets, and ELF toolchains only on ELF ones.
-      The <b>image</b> column copies the <code>docker pull</code> command for the exact toolchain image each row was measured from.</div>
   </div>
 
-  <div class="row" style="margin-bottom:10px">
-    <div class="field"><input type="search" id="q" placeholder="Filter table (triple, libc, isa, soname, ...)"></div>
+  <div class="toolbar">
+    <div class="summary" id="summary"></div>
+    <div class="tools">
+      <select id="famsel" aria-label="Architecture"></select>
+      <select id="libcsel" aria-label="C library"></select>
+      <input type="search" id="q" placeholder="Search" aria-label="Search toolchains">
+    </div>
   </div>
   <div class="count" id="count"></div>
-  <div class="tablewrap">
-    <table id="t"><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table>
-  </div>
-  <p class="sub" style="margin-top:16px">Dataset: <code>fingerprints.json</code>, schema <code id="ver">?</code>. Each record is computed once from a pinned toolchain Dockerfile. <span id="release"></span></p>
+  <div class="groups" id="groups"></div>
+  <details class="ruled" id="ruledbox" hidden><summary id="ruledsum"></summary><div class="groups" id="ruled"></div></details>
+
+  <p class="hint" style="margin-top:16px">Each row is one target ABI: architecture, endianness, word size, C library, loader and float ABI. Open a row for the toolchains that build for it, oldest gcc first, with what changed from the row above tinted.
+    Verdicts are <b class="badge b-OK">OK</b>, <b class="badge b-RISKY">RISKY</b> or <b class="badge b-NO">NO</b>, with the reasons, best first.
+    Toolchains whose compiler ran but compiled nothing are marked <b class="badge b-SKIP">compile failed</b> and never matched.
+    No-MMU toolchains produce bFLT (uClinux flat) binaries: they run only on bFLT targets, and ELF toolchains only on ELF ones.
+    <b>copy pull</b> copies the <code>docker pull</code> command for the exact image a toolchain was measured from.</p>
+  <p class="sub" style="margin-top:8px">Dataset: <code>fingerprints.json</code>, schema <code id="ver">?</code>. Each record is computed once from a pinned toolchain Dockerfile. <span id="release"></span></p>
 </div>
 
 <script type="module">
 import {
   COLS, TARGET, shown, placeholder, splitList, fmt, matchRecord, skipResult, schemaProblem, newerDataNote,
-  parseTargetText, extraCols, imageRef, verdictRank,
+  parseTargetText, extraCols, imageRef, verdictRank, recordFamily, groupByAbi, groupRank, abiLabel, VERDICT_ORDER,
 } from "./matcher.js";
 
 // ---- UI --------------------------------------------------------------------
-let DATA = [], cols = COLS, sortKey = null, sortDir = 1, results = {};
+let DATA = [], GROUPS = [], cols = COLS, results = {};
+const sel = {verdict: null, fam: null, libc: null};
 const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+// a record's result: its match, or why it is never matched (probe failed), or null
+const result = r => results[r.tc_id] || skipResult(r);
+const hasTarget = () => Object.keys(results).length > 0;
+const verdictOf = g => VERDICT_ORDER[g.rank] || "";
 
 function buildTargetFields(){
-  const box = $("targetfields");
   TARGET.forEach(f => {
-    const d = document.createElement("div"); d.className = "field";
-    d.innerHTML = `<label for="t_${f.id}"></label><input id="t_${f.id}">`;
-    d.querySelector("label").textContent = f.label;
-    d.querySelector("input").placeholder = f.ph;
-    box.appendChild(d);
+    const i = el("input"); i.id = "t_" + f.id; i.placeholder = f.ph;
+    i.addEventListener("keydown", e => { if (e.key === "Enter") doMatch(); });
+    const l = el("label"); l.append(f.label, i);
+    $("facts").appendChild(l);
   });
 }
 
@@ -139,137 +186,229 @@ function readTarget(){
   return t;
 }
 
-function render(){
-  const q = $("q").value.toLowerCase();
-  const head = $("head"); head.innerHTML = "";
-  // sortKey: null = default (verdict, then toolchain), "match" = verdict, or a cols index
-  const th = (label, key) => {
-    const h = document.createElement("th"); h.textContent = label;
-    if (key !== undefined){
-      if (sortKey === key){ const a = document.createElement("span"); a.className = "arrow"; a.textContent = sortDir > 0 ? " ▲" : " ▼"; h.appendChild(a); }
-      h.onclick = () => { sortDir = sortKey === key ? -sortDir : 1; sortKey = key; render(); };
-    }
-    head.appendChild(h); return h;
-  };
-  th("match", "match"); th("why"); th("image");
-  cols.forEach(([k, label, cls], i) => {
-    const h = th(label, i);
-    if (cls === "extra"){ h.classList.add("extra"); h.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
-  });
-  // records that are never matched (probe failed) show that even before Match
-  const result = r => results[r.tc_id] || skipResult(r);
-  const byVerdict = (a, b) => verdictRank(result(a)) - verdictRank(result(b));
-  const byId = (a, b) => a.tc_id.localeCompare(b.tc_id);
-  let rows = DATA.filter(r => JSON.stringify(r).toLowerCase().includes(q));
-  if (sortKey === null) rows.sort((a, b) => byVerdict(a, b) || byId(a, b));
-  else if (sortKey === "match") rows.sort((a, b) => byVerdict(a, b) * sortDir || byId(a, b));
-  else {
-    const k = cols[sortKey][0];
-    rows.sort((a, b) => fmt(shown(a, k)).localeCompare(fmt(shown(b, k)), undefined, {numeric: true}) * sortDir || byVerdict(a, b) || byId(a, b));
-  }
-
-  const body = $("body"); body.innerHTML = "";
-  rows.forEach(r => {
-    const tr = document.createElement("tr");
-    const res = result(r);
-    const vtd = document.createElement("td"), wtd = document.createElement("td");
-    wtd.className = "why";
-    if (res){
-      const b = document.createElement("span");
-      b.className = "badge " + ({OK: "b-ok", RISKY: "b-risk", NO: "b-no"}[res.verdict] || "b-skip");
-      b.textContent = res.label || res.verdict; vtd.appendChild(b);
-      if (res.reasons.length){
-        const ul = document.createElement("ul");
-        res.reasons.forEach(x => { const li = document.createElement("li"); li.className = ({NO: "no", RISKY: "risk", INFO: "info"})[x.level]; li.textContent = x.text; ul.appendChild(li); });
-        wtd.appendChild(ul);
-      }
-    }
-    const itd = document.createElement("td"), ref = imageRef(r);
-    if (ref){
-      const b = document.createElement("button"); b.className = "ghost copy";
-      b.textContent = "copy pull"; b.title = "docker pull " + ref;
-      b.onclick = () => navigator.clipboard.writeText("docker pull " + ref)
-        .then(() => { b.textContent = "copied"; setTimeout(() => b.textContent = "copy pull", 1500); })
-        .catch(() => prompt("Copy this command:", "docker pull " + ref));
-      itd.appendChild(b);
-    } else itd.textContent = "—";
-    tr.append(vtd, wtd, itd);
-    cols.forEach(([k, , cls]) => {
-      const td = document.createElement("td"), v = shown(r, k), ph = placeholder(r, k);
-      if (cls === "list" && Array.isArray(v) && v.length){
-        const d = document.createElement("details"), sm = document.createElement("summary");
-        sm.textContent = v.length + " sonames"; d.append(sm, v.join(", ")); td.appendChild(d);
-      } else td.textContent = fmt(v);
-      if (cls) td.className = cls;
-      if (ph){ td.classList.add("ph"); td.title = ph; }
-      tr.appendChild(td);
-    });
-    body.appendChild(tr);
-  });
-  const n = {}; rows.forEach(r => { const v = result(r); if (v) n[v.verdict] = (n[v.verdict] || 0) + 1; });
-  const parts = [["OK", "OK"], ["RISKY", "RISKY"], ["NO", "NO"], ["SKIP", "not matched (probe failed)"]]
-    .filter(([v]) => n[v]).map(([v, label]) => `${n[v]} ${label}`);
-  $("count").textContent = rows.length + " toolchain(s)" + (parts.length ? ": " + parts.join(", ") : "");
+function factLine(){
+  const t = readTarget();
+  const bits = [t.format, t.machine, t.endian && t.endian + "-endian", t.class, t.glibc && "glibc " + t.glibc,
+    t.kernel && "kernel " + t.kernel, t.interp, t.provides.size && t.provides.size + " sonames"].filter(Boolean);
+  $("factline").textContent = bits.length ? bits.join(" · ") : "No target facts yet";
 }
 
+// ---- rendering -----------------------------------------------------------------
+function passes(g, skip){
+  const q = $("q").value.toLowerCase();
+  if (skip !== "fam" && sel.fam && g.fam !== sel.fam) return false;
+  if (skip !== "libc" && sel.libc && g.libc !== sel.libc) return false;
+  if (q && !g.records.some(r => JSON.stringify(r).toLowerCase().includes(q))) return false;
+  return true;
+}
+
+// A facet as a select; each option says how many rows it would leave.
+function fillSelect(id, key, all, values){
+  const s = $(id); s.innerHTML = "";
+  s.add(new Option(all, ""));
+  values.filter(([v, n]) => n || sel[key] === v).forEach(([v, n]) => s.add(new Option(`${v} (${n})`, v)));
+  s.value = sel[key] || "";
+}
+
+function render(){
+  const target = hasTarget();
+  const base = GROUPS.filter(g => passes(g));
+  const counts = {};
+  base.forEach(g => { const v = verdictOf(g) || "all"; counts[v] = (counts[v] || 0) + 1; });
+
+  const sm = $("summary"); sm.innerHTML = "";
+  const stats = target ? [["OK", "can run"], ["RISKY", "might run"], ["NO", "cannot run"], ["SKIP", "not matched"]]
+                       : [["all", "target ABIs"], ["SKIP", "not matched"]];
+  stats.filter(([k]) => counts[k] || k !== "SKIP").forEach(([k, txt]) => {
+    const b = el("button", "stat " + k); b.type = "button";
+    b.setAttribute("aria-pressed", sel.verdict === k ? "true" : "false");
+    b.append(el("b", null, String(counts[k] || 0)), el("span", null, txt));
+    b.onclick = () => { sel.verdict = sel.verdict === k ? null : k; render(); };
+    sm.appendChild(b);
+  });
+
+  // facet counts follow the other filters, and leave out rows folded away below
+  const visible = g => !target || sel.verdict || g.rank <= 1;
+  const tally = (skip, key) => { const c = new Map(); GROUPS.filter(g => passes(g, skip) && visible(g)).forEach(g => c.set(g[key], (c.get(g[key]) || 0) + 1)); return c; };
+  const fams = tally("fam", "fam"), libcs = tally("libc", "libc");
+  const uniq = key => [...new Set(GROUPS.map(g => g[key]))].filter(Boolean).sort();
+  fillSelect("famsel", "fam", "All architectures", uniq("fam").map(v => [v, fams.get(v) || 0]));
+  fillSelect("libcsel", "libc", "All C libraries", uniq("libc").map(v => [v, libcs.get(v) || 0]));
+
+  // without a target, unmatched groups go last rather than first
+  const order = g => !target && verdictOf(g) === "SKIP" ? VERDICT_ORDER.length + 1 : g.rank;
+  const shownGroups = base.filter(g => !sel.verdict || (verdictOf(g) || "all") === sel.verdict)
+    .sort((a, b) => order(a) - order(b) || a.label.name.localeCompare(b.label.name));
+  const fold = target && !sel.verdict;
+  const main = fold ? shownGroups.filter(g => g.rank <= 1) : shownGroups;
+  const ruled = fold ? shownGroups.filter(g => g.rank > 1) : [];
+
+  fill($("groups"), main, target ? "No toolchain can run on this target. The ones that cannot are listed below with the reasons." : "Nothing matches these filters.");
+  $("ruledbox").hidden = !ruled.length;
+  $("ruledsum").textContent = `${ruled.length} target ABI${ruled.length === 1 ? "" : "s"} that cannot run here or are not matched`;
+  if ($("ruledbox").open) fill($("ruled"), ruled, ""); else $("ruled").innerHTML = "";
+  const n = main.reduce((s, g) => s + g.records.length, 0);
+  $("count").textContent = `${main.length} target ABI${main.length === 1 ? "" : "s"}, ${n} toolchain${n === 1 ? "" : "s"}` + (fold ? " that can or might run" : "");
+}
+
+function fill(box, groups, emptyText){
+  box.innerHTML = "";
+  if (!groups.length){ if (emptyText) box.appendChild(el("div", "empty", emptyText)); return; }
+  groups.forEach(g => box.appendChild(groupRow(g)));
+}
+
+function badge(res){
+  const v = res ? res.verdict : "";
+  return el("span", "badge " + (VERDICT_ORDER.includes(v) ? "b-" + v : "b-none"), res ? res.label || res.verdict : "—");
+}
+
+function groupRow(g){
+  const d = el("details", "g"), s = el("summary");
+  const v = verdictOf(g);
+  const b = el("span", "badge " + (v ? "b-" + v : "b-none"), v === "SKIP" ? "not matched" : v || "—");
+  const name = el("div", "name", g.label.name);
+  name.appendChild(el("small", null, [g.label.detail, g.records[0].triple].filter(Boolean).join(" · ")));
+  // the best toolchain's first reason, as a one-line why
+  const best = g.records.find(r => verdictRank(result(r)) === g.rank);
+  const res = best && result(best), top = res && res.reasons.find(x => x.level !== "INFO" || res.verdict === "SKIP");
+  const why = el("div", "why1");
+  if (top){ why.textContent = top.text; why.classList.add(top.level); }
+  else if (res) why.textContent = "no problems found for the facts given";
+  else why.textContent = "gcc " + [...new Set(g.records.map(r => r.gcc_version).filter(Boolean))].join(", ");
+  const total = g.records.length, good = g.records.filter(r => verdictRank(result(r)) <= 1).length;
+  const n = el("div", "n", hasTarget() && g.rank <= 1 && good < total ? `${good} of ${total} toolchains` : `${total} toolchain${total === 1 ? "" : "s"}`);
+  s.append(b, name, why, n);
+  d.appendChild(s);
+  d.addEventListener("toggle", () => { if (d.open && d.children.length === 1) d.appendChild(detail(g)); });
+  return d;
+}
+
+// The fields that most often differ between toolchains of one ABI.
+const KEY_COLS = ["gcc_version", "libc.version", "kernel.min", "kernel.headers", "time.time64_syscalls", "glibc.requires", "needed_corpus"]
+  .map(k => COLS.find(c => c[0] === k)).filter(Boolean);
+
+function valueCell(r, key){
+  const td = el("td", null, fmt(shown(r, key))), ph = placeholder(r, key);
+  if (ph){ td.classList.add("ph"); td.title = ph; }
+  return td;
+}
+
+function copyButton(r){
+  const ref = imageRef(r);
+  if (!ref) return document.createTextNode("—");
+  const b = el("button", "ghost copy", "copy pull"); b.type = "button"; b.title = "docker pull " + ref;
+  b.onclick = () => navigator.clipboard.writeText("docker pull " + ref)
+    .then(() => { b.textContent = "copied"; setTimeout(() => b.textContent = "copy pull", 1500); })
+    .catch(() => prompt("Copy this command:", "docker pull " + ref));
+  return b;
+}
+
+function detail(g){
+  const box = el("div", "detail");
+  // toolchains of this ABI; a cell is tinted where it differs from the row above
+  const t = el("table"), hr = el("tr");
+  ["toolchain", "verdict", "why", ...KEY_COLS.map(c => c[1]), "image"].forEach(h => hr.appendChild(el("th", null, h)));
+  t.appendChild(el("thead")).appendChild(hr);
+  const tb = el("tbody"); let prev = null;
+  g.records.forEach(r => {
+    const tr = el("tr"), res = result(r);
+    tr.appendChild(el("td", null, r.tc_id));
+    tr.appendChild(el("td")).appendChild(badge(res));
+    const wt = tr.appendChild(el("td", "why"));
+    if (res && res.reasons.length){
+      const ul = wt.appendChild(el("ul"));
+      res.reasons.forEach(x => ul.appendChild(el("li", ({NO: "no", RISKY: "risk", INFO: "info"})[x.level], x.text)));
+    }
+    KEY_COLS.forEach(([k, , cls]) => {
+      const td = tr.appendChild(valueCell(r, k));
+      if (cls) td.classList.add(cls);
+      if (prev && fmt(shown(prev, k)) !== fmt(shown(r, k))) td.classList.add("diff");
+    });
+    tr.appendChild(el("td")).appendChild(copyButton(r));
+    tb.appendChild(tr); prev = r;
+  });
+  t.appendChild(tb);
+  box.appendChild(el("div", "tw")).appendChild(t);
+
+  // every field, one column per toolchain (fields from newer data included)
+  const more = el("details", "more");
+  more.appendChild(el("summary", null, "All fields"));
+  more.addEventListener("toggle", () => {
+    if (!more.open || more.children.length > 1) return;
+    const ft = el("table"), fh = el("tr");
+    fh.appendChild(el("th", null, "field"));
+    g.records.forEach(r => fh.appendChild(el("th", null, r.tc_id)));
+    ft.appendChild(el("thead")).appendChild(fh);
+    const fb = ft.appendChild(el("tbody"));
+    cols.forEach(([k, label, cls]) => {
+      const tr = fb.appendChild(el("tr")), th = tr.appendChild(el("th", null, label));
+      if (cls === "extra"){ th.classList.add("extra"); th.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
+      g.records.forEach(r => { const td = tr.appendChild(valueCell(r, k)); if (cls === "list") td.classList.add("list"); });
+    });
+    more.appendChild(el("div", "tw")).appendChild(ft);
+  });
+  box.appendChild(more);
+  return box;
+}
+
+// ---- actions ----------------------------------------------------------------------
 function doMatch(){
+  factLine();
   const t = readTarget();
   results = {};
-  DATA.forEach(r => { const m = matchRecord(r, t); if (m) results[r.tc_id] = m; });
+  DATA.forEach(r => { const m = matchRecord(r, t); if (m && m.verdict !== "SKIP") results[r.tc_id] = m; });
+  GROUPS.forEach(g => { g.rank = groupRank(g, result); });
   render();
 }
 
 function parseRaw(){
-  const f = parseTargetText($("raw").value), notes = [];
-  const set = (id, val, note) => { if (val){ $("t_" + id).value = val; notes.push(note + " " + val); } };
-  set("interp", f.interp, "interp");
+  const txt = $("raw").value;
+  if (!txt.trim()) return doMatch();
+  const f = parseTargetText(txt), found = [];
+  const set = (id, val) => { if (val){ $("t_" + id).value = val; found.push(id); } };
+  ["interp", "kernel", "endian", "machine", "class", "glibc", "format"].forEach(k => set(k, f[k]));
   const prov = new Set(splitList($("t_provides").value)), before = prov.size;
   f.sonames.forEach(s => prov.add(s));
   $("t_provides").value = [...prov].sort().join(", ");
-  set("kernel", f.kernel, "kernel");
-  set("endian", f.endian, "endian");
-  set("machine", f.machine, "machine");
-  set("class", f.class, "class");
-  set("glibc", f.glibc, "glibc");
-  set("format", f.format, "format");
-  if (prov.size > before) notes.push((prov.size - before) + " soname(s)");
-  $("parseout").textContent = notes.length ? "parsed: " + notes.join(", ") : "nothing recognized";
+  if (prov.size > before) found.push("sonames");
+  $("parseout").textContent = found.length ? "" : "Nothing recognized in the paste; fill in the facts by hand.";
+  if (!found.length) $("factbox").open = true;
   doMatch();
 }
 
 function load(doc){
   const problem = schemaProblem(doc);
-  if (problem){
-    $("loaderr").hidden = false;
-    DATA = []; render();
-    $("loaderr").textContent = problem;
-    return;
-  }
+  if (problem){ $("loaderr").hidden = false; $("loaderr").textContent = problem; return; }
   $("ver").textContent = doc.schema_version;
   const note = newerDataNote(doc);
   if (note){ $("loaderr").hidden = false; $("loaderr").className = "note"; $("loaderr").textContent = note; }
   DATA = doc.toolchains;
   cols = [...COLS, ...extraCols(DATA)];
+  GROUPS = groupByAbi(DATA).map(g => ({...g, label: abiLabel(g), fam: recordFamily(g.records[0]) || "",
+                                        libc: (g.records[0].libc && g.records[0].libc.kind) || ""}));
   // Offer the dataset's own machine names; uname -m names work too.
-  const dl = document.createElement("datalist"); dl.id = "machines";
-  [...new Set(DATA.map(r => r.elf && r.elf.machine).filter(Boolean))].sort()
-    .forEach(m => { const o = document.createElement("option"); o.value = m; dl.appendChild(o); });
+  const dl = el("datalist"); dl.id = "machines";
+  [...new Set(DATA.map(r => r.elf && r.elf.machine).filter(Boolean))].sort().forEach(m => dl.appendChild(new Option(m)));
   document.body.appendChild(dl); $("t_machine").setAttribute("list", "machines");
-  render();
+  doMatch();
 }
 
 buildTargetFields();
-$("match").onclick = doMatch;
-$("parse").onclick = parseRaw;
-$("clear").onclick = () => { TARGET.forEach(f => $("t_" + f.id).value = ""); results = {}; render(); };
+$("match").onclick = parseRaw;
+$("clear").onclick = () => {
+  TARGET.forEach(f => $("t_" + f.id).value = ""); $("raw").value = ""; $("parseout").textContent = "";
+  sel.verdict = null; doMatch();
+};
 $("q").addEventListener("input", render);
+$("famsel").onchange = e => { sel.fam = e.target.value || null; render(); };
+$("libcsel").onchange = e => { sel.libc = e.target.value || null; render(); };
+$("ruledbox").addEventListener("toggle", render);
 
 // Which toolchain-fingerprints release the data came from (written by scripts/fetch-data.mjs).
 fetch("data-release.json").then(r => r.ok ? r.json() : null).then(rel => {
   if (!rel || !rel.tag) return;
-  const a = document.createElement("a");
+  const a = el("a", null, `Release ${rel.tag}`);
   a.href = rel.tag.startsWith("local:") ? "#" : `https://github.com/${rel.repo}/releases/tag/${rel.tag}`;
-  a.textContent = `Release ${rel.tag}`;
   $("release").append(a, ".");
 }).catch(() => {});
 

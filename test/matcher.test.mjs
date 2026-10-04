@@ -3,7 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily, imageRef, verdictRank,
-         KNOWN_MINOR, SUPPORTED_MAJOR, placeholder, shown, recordFamily, skipResult, targetFormat } from "../site/matcher.js";
+         KNOWN_MINOR, SUPPORTED_MAJOR, placeholder, shown, recordFamily, skipResult, targetFormat,
+         abiKey, groupByAbi, groupRank, abiLabel } from "../site/matcher.js";
 
 const load = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const fixture = load("./fixtures/fingerprints.json");
@@ -280,4 +281,39 @@ test("2.4/2.5 fields have columns; fields added under them later still become ex
   assert.equal(KNOWN_MINOR, 5);
   assert.equal(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.5`}), null);
   assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), /extra columns/);
+});
+
+// ---- grouping by target ABI ----------------------------------------------------
+test("toolchains group by target ABI whatever their origin, oldest gcc first", () => {
+  const a = byId["mips32-uclibc-2017.11"], b = byId["mips32-uclibc-2026.08"];
+  const other = {...a, tc_id: "vendor-sdk-mips", gcc_version: "4.9.4"};      // same ABI, not a Bootlin name
+  const groups = groupByAbi([b, a, other, byId["armv7-eabihf-musl-2026.08"]]);
+  const mips = groups.find(g => g.records.includes(a));
+  assert.ok(mips.records.includes(b) && mips.records.includes(other));
+  assert.deepEqual(mips.records.map(r => r.gcc_version), [...mips.records.map(r => r.gcc_version)].sort((x, y) => vcmp(x, y)));
+  assert.equal(mips.records[0].tc_id, "vendor-sdk-mips");
+  assert.equal(groups.length, 2);
+  assert.match(abiLabel(mips).name, /^mips uclibc \/lib\/ld-uClibc\.so\.0$/);
+});
+
+test("a group takes its best record's verdict", () => {
+  const a = byId["mips32-uclibc-2017.11"], b = byId["mips32-uclibc-2026.08"];
+  const [g] = groupByAbi([a, b]);
+  assert.equal(groupRank(g, r => matchRecord(r, OLD_MIPS)), verdictRank({verdict: "OK"}));
+  assert.equal(groupRank(g, () => null), verdictRank(null));
+});
+
+test("unmatched and bFLT records do not group on placeholder fields", () => {
+  assert.equal(abiKey(FAILED), "unmatched|compile_failed");
+  assert.equal(abiKey({...FAILED, tc_id: "other", triple: "x86_64-linux-gnu"}), abiKey(FAILED));
+  assert.ok(!abiKey(BFLT).includes("big"));                                   // elf.endian is a placeholder there
+  assert.match(abiLabel({records: [BFLT]}).name, /^arm uclibc bFLT$/);
+});
+
+test("pinned dataset: every record lands in exactly one group", { skip: !existsSync(live) && "no site/fingerprints.json" }, () => {
+  const doc = JSON.parse(readFileSync(live, "utf8"));
+  const groups = groupByAbi(doc.toolchains);
+  assert.equal(groups.reduce((n, g) => n + g.records.length, 0), doc.toolchains.length);
+  assert.ok(groups.length < doc.toolchains.length / 4, `${groups.length} groups for ${doc.toolchains.length} records`);
+  for (const g of groups) assert.ok(abiLabel(g).name, g.key);
 });

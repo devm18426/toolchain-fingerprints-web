@@ -109,6 +109,42 @@ export function imageRef(r){
 export const VERDICT_ORDER = ["OK", "RISKY", "NO", "SKIP"];
 export const verdictRank = res => res ? VERDICT_ORDER.indexOf(res.verdict) : VERDICT_ORDER.length;
 
+// ---- grouping by target ABI --------------------------------------------------
+// The page shows one row per target ABI: the facts that decide whether a binary
+// can start on a device at all. They come from fields every record has, so a
+// toolchain joins its group whatever its origin (a Bootlin release, built from
+// source, a vendor SDK). Placeholder fields count as unknown; records that are
+// not matched (probe failed) group by their probe status instead.
+const ABI_FIELDS = ["elf.endian", "elf.class", "libc.kind", "interp", "float_abi"];
+export function abiKey(r){
+  const f = probeFailure(r);
+  if (f) return "unmatched|" + f.status;
+  return [recordFamily(r), recordFormat(r), ...ABI_FIELDS.map(k => fmt(shown(r, k)))].join("|");
+}
+// Records grouped by abiKey, each group's records oldest gcc first.
+export function groupByAbi(records){
+  const groups = new Map();
+  for (const r of records){
+    const k = abiKey(r);
+    if (!groups.has(k)) groups.set(k, {key: k, records: []});
+    groups.get(k).records.push(r);
+  }
+  const byGcc = (a, b) => vcmp(a.gcc_version, b.gcc_version) || a.tc_id.localeCompare(b.tc_id);
+  return [...groups.values()].map(g => (g.records.sort(byGcc), g));
+}
+// A group's verdict is its best record's; resultOf(r) gives a record's result or null.
+export const groupRank = (g, resultOf) => Math.min(...g.records.map(r => verdictRank(resultOf(r))));
+// Short names for a group: what it is, and the ABI details under it.
+export function abiLabel(g){
+  const r = g.records[0], f = probeFailure(r);
+  if (f) return {name: `${f.status.replace(/_/g, " ")}`, detail: "not matched: the probe could not compile with these toolchains"};
+  const fmtName = recordFormat(r) === "elf" ? "" : recordFormat(r) === "bflt" ? "bFLT" : recordFormat(r);
+  const name = [recordFamily(r) || "unknown arch", r.libc && r.libc.kind, fmtName || r.interp || "static only"].filter(Boolean).join(" ");
+  const e = shown(r, "elf.endian"), c = shown(r, "elf.class"), fl = shown(r, "float_abi");
+  const detail = [e && e + "-endian", c && c + "-bit", fl && fl !== "unknown" && fl + " float"].filter(Boolean).join(", ");
+  return {name, detail};
+}
+
 // ---- machine families --------------------------------------------------------
 // readelf's Machine text, uname -m and schema 2.3's arch.family all name the
 // same thing differently. Unrecognized names become their first word, lowercased,
