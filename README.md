@@ -11,6 +11,11 @@ endianness, machine, ELF class, glibc version and binary format (ELF, or bFLT
 on no-MMU uClinux). Or paste the output of `readelf -h -l -d` or `file` on a
 binary that already runs there, plus `ls /lib` and `uname -r`. Rules only fire for the facts you gave.
 
+The page shows one row per target ABI (architecture, endianness, word size, C
+library, loader, float ABI). Once you match a target, rows that cannot run are
+folded away; open a row to see each toolchain for that ABI with its verdict,
+the reasons, and the `docker pull` command for its image.
+
 | verdict | when |
 |---|---|
 | NO | ELF binaries on a bFLT target or bFLT binaries on an ELF one; wrong endianness or machine family; ELF64 binaries on an ELF32 userland; a different loader; a library every binary needs is missing; libc uses only `*_time64` syscalls and the kernel is older than 5.1; the kernel is below glibc's minimum; the program needs newer `GLIBC_` symbols than the target has |
