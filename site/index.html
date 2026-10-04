@@ -61,6 +61,8 @@
   td.why li.no{color:var(--no)} td.why li.risk{color:var(--risk)} td.why li.info{color:var(--muted)}
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.75rem;font-weight:600}
   .b-ok{background:var(--okbg);color:var(--ok)} .b-no{background:var(--nobg);color:var(--no)} .b-risk{background:var(--riskbg);color:var(--risk)}
+  .b-skip{background:var(--card);color:var(--muted);border:1px dashed var(--muted)}
+  td.ph{color:var(--muted)}
   .count{color:var(--muted);font-size:.85rem;margin:10px 2px}
   .error{background:var(--nobg);color:var(--no);border-radius:10px;padding:12px 16px;margin-bottom:20px}
   .note{background:var(--riskbg);color:var(--risk);border-radius:10px;padding:12px 16px;margin-bottom:20px}
@@ -85,6 +87,7 @@
       <textarea id="raw" rows="7" placeholder="Paste any of these, from the target or from a binary that already runs on it:
 
   readelf -h -l -d /bin/busybox     (interp, NEEDED, endianness, machine)
+  file /bin/busybox                 (ELF or BFLT executable)
   ls /lib                           (sonames, and libc-2.x.so for glibc)
   uname -r                          (kernel version)"></textarea>
       <div class="row" style="margin-top:8px">
@@ -93,6 +96,8 @@
       </div>
     </details>
     <div class="hint">Each row is <b class="badge b-ok">OK</b>, <b class="badge b-risk">RISKY</b> or <b class="badge b-no">NO</b>, with the reasons listed next to it, best first. Rules only fire for target facts you filled in.
+      Toolchains whose compiler ran but compiled nothing are marked <b class="badge b-skip">compile failed</b> and never matched; their compiler-derived columns show <code>—</code>.
+      No-MMU toolchains produce bFLT (uClinux flat) binaries: they run only on bFLT targets, and ELF toolchains only on ELF ones.
       The <b>image</b> column copies the <code>docker pull</code> command for the exact toolchain image each row was measured from.</div>
   </div>
 
@@ -108,8 +113,8 @@
 
 <script type="module">
 import {
-  COLS, TARGET, cell, splitList, fmt, matchRecord, schemaProblem, newerDataNote, parseTargetText, extraCols,
-  imageRef, verdictRank,
+  COLS, TARGET, shown, placeholder, splitList, fmt, matchRecord, skipResult, schemaProblem, newerDataNote,
+  parseTargetText, extraCols, imageRef, verdictRank,
 } from "./matcher.js";
 
 // ---- UI --------------------------------------------------------------------
@@ -151,26 +156,28 @@ function render(){
     const h = th(label, i);
     if (cls === "extra"){ h.classList.add("extra"); h.title = "Field from a newer dataset; shown as-is, not used by any rule"; }
   });
-  const byVerdict = (a, b) => verdictRank(results[a.tc_id]) - verdictRank(results[b.tc_id]);
+  // records that are never matched (probe failed) show that even before Match
+  const result = r => results[r.tc_id] || skipResult(r);
+  const byVerdict = (a, b) => verdictRank(result(a)) - verdictRank(result(b));
   const byId = (a, b) => a.tc_id.localeCompare(b.tc_id);
   let rows = DATA.filter(r => JSON.stringify(r).toLowerCase().includes(q));
   if (sortKey === null) rows.sort((a, b) => byVerdict(a, b) || byId(a, b));
   else if (sortKey === "match") rows.sort((a, b) => byVerdict(a, b) * sortDir || byId(a, b));
   else {
     const k = cols[sortKey][0];
-    rows.sort((a, b) => fmt(cell(a, k)).localeCompare(fmt(cell(b, k)), undefined, {numeric: true}) * sortDir || byVerdict(a, b) || byId(a, b));
+    rows.sort((a, b) => fmt(shown(a, k)).localeCompare(fmt(shown(b, k)), undefined, {numeric: true}) * sortDir || byVerdict(a, b) || byId(a, b));
   }
 
   const body = $("body"); body.innerHTML = "";
   rows.forEach(r => {
     const tr = document.createElement("tr");
-    const res = results[r.tc_id];
+    const res = result(r);
     const vtd = document.createElement("td"), wtd = document.createElement("td");
     wtd.className = "why";
     if (res){
       const b = document.createElement("span");
-      b.className = "badge " + ({OK: "b-ok", RISKY: "b-risk", NO: "b-no"})[res.verdict];
-      b.textContent = res.verdict; vtd.appendChild(b);
+      b.className = "badge " + ({OK: "b-ok", RISKY: "b-risk", NO: "b-no"}[res.verdict] || "b-skip");
+      b.textContent = res.label || res.verdict; vtd.appendChild(b);
       if (res.reasons.length){
         const ul = document.createElement("ul");
         res.reasons.forEach(x => { const li = document.createElement("li"); li.className = ({NO: "no", RISKY: "risk", INFO: "info"})[x.level]; li.textContent = x.text; ul.appendChild(li); });
@@ -188,16 +195,21 @@ function render(){
     } else itd.textContent = "—";
     tr.append(vtd, wtd, itd);
     cols.forEach(([k, , cls]) => {
-      const td = document.createElement("td"), v = cell(r, k);
+      const td = document.createElement("td"), v = shown(r, k), ph = placeholder(r, k);
       if (cls === "list" && Array.isArray(v) && v.length){
         const d = document.createElement("details"), sm = document.createElement("summary");
         sm.textContent = v.length + " sonames"; d.append(sm, v.join(", ")); td.appendChild(d);
       } else td.textContent = fmt(v);
-      if (cls) td.className = cls; tr.appendChild(td);
+      if (cls) td.className = cls;
+      if (ph){ td.classList.add("ph"); td.title = ph; }
+      tr.appendChild(td);
     });
     body.appendChild(tr);
   });
-  $("count").textContent = rows.length + " toolchain(s)";
+  const n = {}; rows.forEach(r => { const v = result(r); if (v) n[v.verdict] = (n[v.verdict] || 0) + 1; });
+  const parts = [["OK", "OK"], ["RISKY", "RISKY"], ["NO", "NO"], ["SKIP", "not matched (probe failed)"]]
+    .filter(([v]) => n[v]).map(([v, label]) => `${n[v]} ${label}`);
+  $("count").textContent = rows.length + " toolchain(s)" + (parts.length ? ": " + parts.join(", ") : "");
 }
 
 function doMatch(){
@@ -219,6 +231,7 @@ function parseRaw(){
   set("machine", f.machine, "machine");
   set("class", f.class, "class");
   set("glibc", f.glibc, "glibc");
+  set("format", f.format, "format");
   if (prov.size > before) notes.push((prov.size - before) + " soname(s)");
   $("parseout").textContent = notes.length ? "parsed: " + notes.join(", ") : "nothing recognized";
   doMatch();

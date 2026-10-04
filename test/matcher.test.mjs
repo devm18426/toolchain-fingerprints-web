@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily, imageRef, verdictRank } from "../site/matcher.js";
+import { matchRecord, parseTargetText, schemaProblem, newerDataNote, vcmp, COLS, cell, fmt, extraCols, machineFamily, imageRef, verdictRank,
+         KNOWN_MINOR, SUPPORTED_MAJOR, placeholder, shown, recordFamily, skipResult, targetFormat } from "../site/matcher.js";
 
 const load = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
 const fixture = load("./fixtures/fingerprints.json");
@@ -83,7 +84,12 @@ test("pinned dataset: loads, unique ids, every rule runs on every record", { ski
                                     endian: "little", machine: "ARM", glibc: "2.36"})];
   for (const r of doc.toolchains){
     for (const t of profiles) assert.ok(["OK", "RISKY", "NO"].includes(matchRecord(r, t).verdict), r.tc_id);
-    for (const [k] of COLS) fmt(cell(r, k));    // every column resolves without throwing
+    for (const [k] of COLS) fmt(shown(r, k));   // every column resolves without throwing
+  }
+  // a dataset this page was written for needs no extra columns and no "newer" note
+  if (+doc.schema_version.split(".")[1] <= KNOWN_MINOR){
+    assert.deepEqual(extraCols(doc.toolchains), []);
+    assert.equal(newerDataNote(doc), null);
   }
 });
 
@@ -117,7 +123,7 @@ test("older 2.1/2.2 records without arch fall back to mips/arm", () => {
 
 test("newer minor versions load with a note; newer majors are refused", () => {
   assert.equal(schemaProblem({schema_version: "2.9", toolchains: []}), null);
-  assert.match(newerDataNote({schema_version: "2.9"}), /newer than this page/);
+  assert.match(newerDataNote({schema_version: "2.9"}), /new details/);
   assert.equal(newerDataNote(fixture), null);
   assert.ok(schemaProblem({schema_version: "3.0", toolchains: []}));
 });
@@ -180,7 +186,98 @@ test("imageRef pins the probed image by tag and digest", () => {
   assert.equal(imageRef({tc_id: "x-1"}), "");
 });
 
-test("verdicts order OK, RISKY, NO, then rows without a verdict", () => {
-  const ranks = ["NO", "OK", undefined, "RISKY"].map(v => verdictRank(v && {verdict: v}));
-  assert.deepEqual(ranks, [2, 0, 3, 1]);
+test("verdicts order OK, RISKY, NO, unmatched records, then rows without a verdict", () => {
+  const ranks = ["NO", "OK", undefined, "RISKY", "SKIP"].map(v => verdictRank(v && {verdict: v}));
+  assert.deepEqual(ranks, [2, 0, 4, 1, 3]);
+});
+
+// ---- schema 2.4: probe status -----------------------------------------------
+const FAILED = {...byId["mips32-uclibc-2026.08"], probe: {status: "compile_failed", error: "cc1: error while loading shared libraries: libmpc.so.3"}};
+
+test("compile_failed records are never matched and show the compiler error", () => {
+  for (const t of [OLD_MIPS, target({}), target({machine: "mips"})]){
+    const r = matchRecord(FAILED, t);
+    assert.equal(r.verdict, "SKIP");
+    assert.equal(r.label, "compile failed");
+    assert.match(r.reasons[0].text, /compiled nothing.*libmpc\.so\.3/);
+  }
+  assert.deepEqual(skipResult(FAILED), matchRecord(FAILED, OLD_MIPS));
+  assert.equal(skipResult(byId["mips32-uclibc-2026.08"]), null);              // no probe field (pre-2.4): ok
+  assert.equal(skipResult({...FAILED, probe: {status: "ok", error: ""}}), null);
+  // a status this page does not know is not matched either
+  assert.equal(matchRecord({...FAILED, probe: {status: "timed_out", error: ""}}, OLD_MIPS).verdict, "SKIP");
+});
+
+test("compile_failed records show placeholders as such, but keep real fields", () => {
+  const col = name => COLS.find(c => c[1] === name)[0];
+  for (const name of ["endian", "class", "interp", "needed (minimal)", "time_t bits", "dynamic", "-march", "arch"])
+    assert.ok(placeholder(FAILED, col(name)), name);
+  for (const name of ["toolchain", "triple", "gcc", "libc", "libc ver", "probe"])
+    assert.equal(placeholder(FAILED, col(name)), "", name);
+  assert.equal(fmt(shown(FAILED, "elf.endian")), "—");
+  assert.equal(fmt(shown(FAILED, "probe.status")), "compile_failed");
+});
+
+// ---- schema 2.5: bFLT binaries of no-MMU toolchains ----------------------------
+// Shaped like a 2.5 record: no ELF header, so elf.* are placeholders (endian "big" on a little-endian ARM).
+const BFLT = {...byId["armv7-eabihf-musl-2026.08"], tc_id: "armv7m-uclibc-x", triple: "arm-buildroot-uclinux-uclibcgnueabi",
+              libc: {kind: "uclibc", soname: "", version: "1.0.59"}, ldso: {soname: ""}, interp: "",
+              elf: {class: "32", endian: "big", machine: ""}, isa: "", needed: [], needed_corpus: [], hash_style: "none",
+              time: {time_t_bits: 32, time64_syscalls: "none"}, kernel: {headers: "4.9.61", min: ""},
+              probe: {status: "ok", error: ""}, binary: {format: "bflt"}, arch: {family: "unknown", abi: {}}};
+
+test("bFLT records: machine family comes from the triple; ELF placeholders are not facts", () => {
+  assert.equal(recordFamily(BFLT), "arm");
+  assert.equal(fmt(cell(BFLT, COLS.find(c => c[1] === "arch")[0])), "arm");
+  assert.equal(fmt(shown(BFLT, "elf.endian")), "—");
+  assert.equal(fmt(shown(BFLT, "interp")), "—");
+  assert.equal(fmt(shown(BFLT, "binary.format")), "bflt");
+  assert.equal(fmt(shown(BFLT, "libc.version")), "1.0.59");                     // uClibc version shown
+  assert.equal(fmt(cell({...BFLT, binary: {format: "bflt", bflt: {version: 4, flags: ["ram", "gotpic"]}}},
+                        COLS.find(c => c[1] === "bFLT header")[0])), "v4 ram,gotpic");
+});
+
+test("bFLT binaries do not run on ELF targets, and ELF binaries do not run on bFLT targets", () => {
+  // a loader or an ELF class means the target runs ELF
+  for (const t of [target({interp: "/lib/ld-uClibc.so.0"}), target({class: "ELF32"}), target({format: "ELF", machine: "arm"})]){
+    const r = matchRecord(BFLT, t);
+    assert.equal(r.verdict, "NO");
+    assert.match(r.reasons[0].text, /bFLT/);
+  }
+  const NOMMU = target({format: "bFLT", machine: "arm", endian: "little", kernel: "4.9.0"});
+  const ok = matchRecord(BFLT, NOMMU);
+  assert.equal(ok.verdict, "OK");                                              // placeholder endian "big" did not fire
+  assert.ok(ok.reasons.some(x => x.level === "INFO" && /no ELF header/.test(x.text)));
+  assert.equal(matchRecord(BFLT, {...NOMMU, machine: "m68k"}).verdict, "NO");
+  const elf = matchRecord(byId["armv7-eabihf-musl-2026.08"], NOMMU);
+  assert.equal(elf.verdict, "NO");
+  assert.ok(elf.reasons.some(x => /target runs bFLT/.test(x.text)));
+  // pre-2.5 records have no binary field and are ELF
+  assert.equal(matchRecord(byId["mips32-uclibc-2017.11"], target({format: "bflt"})).verdict, "NO");
+  // a format this page does not know: ELF rules are skipped, so it cannot be OK
+  const unk = matchRecord({...BFLT, binary: {format: "pe"}}, target({endian: "little"}));
+  assert.equal(unk.verdict, "RISKY");
+  assert.equal(matchRecord({...BFLT, binary: {format: "pe"}}, target({format: "bflt"})).verdict, "OK");
+});
+
+test("target format: given, implied by ELF-only facts, or unknown", () => {
+  assert.equal(targetFormat(target({format: "BFLT"})), "bflt");
+  assert.equal(targetFormat(target({format: "flat"})), "bflt");
+  assert.equal(targetFormat(target({format: "elf32"})), "elf");
+  assert.equal(targetFormat(target({interp: "/lib/ld.so.1"})), "elf");
+  assert.equal(targetFormat(target({endian: "big"})), "");
+  assert.equal(targetFormat(target({format: "something else", interp: "/lib/ld.so.1"})), "");
+  assert.equal(parseTargetText("/bin/sh: BFLT executable - version 4 ram gotpic\n").format, "bFLT");
+  assert.equal(parseTargetText("ELF Header:\n  Class:  ELF32\n").format, "ELF");
+  assert.equal(parseTargetText("busybox: ELF 32-bit MSB executable, MIPS").format, "ELF");
+  assert.equal(parseTargetText("3.18.140").format, undefined);
+});
+
+test("2.4/2.5 fields have columns; fields added under them later still become extra columns", () => {
+  const rec = {...BFLT, binary: {format: "bflt", bflt: {version: 4, flags: []}, future: 1},
+               probe: {status: "ok", error: "", future: 2}};
+  assert.deepEqual(extraCols([rec]).map(c => c[0]).sort(), ["binary.future", "probe.future"]);
+  assert.equal(KNOWN_MINOR, 5);
+  assert.equal(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.5`}), null);
+  assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), /extra columns/);
 });
