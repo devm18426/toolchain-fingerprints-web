@@ -1,7 +1,7 @@
 // Pure matcher logic: no DOM. Imported by index.html and by the tests.
 // ---- contract ------------------------------------------------------------
 export const SUPPORTED_MAJOR = 2;           // refuse any other major version of the schema
-export const KNOWN_MINOR = 5;               // newest 2.x this page was written against
+export const KNOWN_MINOR = 6;               // newest 2.x this page was written against
 // Forward compatibility: within 2.x, fields are only added. This page ignores
 // fields it does not know, treats enum values it does not know as unknown (no
 // rule fires on them), shows "—" for fields older data does not have, and
@@ -22,7 +22,7 @@ export const fmt = v => v === "" || v == null ? "—" : Array.isArray(v) ? (v.le
 export const COLS = [
   ["tc_id", "toolchain"], ["triple", "triple"], ["libc.kind", "libc"],
   ["libc.version", "libc ver"], ["gcc_version", "gcc"],
-  ["elf.machine", "machine"], ["elf.class", "class"], ["elf.endian", "endian"], ["march", "-march"], ["isa", "isa"],
+  ["elf.machine", "machine"], ["elf.class", "class"], ["elf.endian", "endian"], ["cpu", "cpu"], ["march", "-march"], ["isa", "isa"],
   ["float_abi", "float"], [archFamily, "arch"], [archAbi, "arch ABI"],
   ["time.time_t_bits", "time_t bits"], ["time.time64_syscalls", "time64 syscalls"],
   ["kernel.headers", "kernel headers"], ["kernel.min", "min kernel"],
@@ -81,7 +81,7 @@ export function probeFailure(r){
 export const recordFormat = r => r && r.binary ? String(r.binary.format || "unknown") : "elf";
 
 const COMPILE_DERIVED = ["elf", "interp", "needed", "needed_corpus", "dynamic_ok", "static_ok", "cxx_ok",
-                         "time", "hash_style", "march", "pie_default", "float_abi", "isa", "arch"];
+                         "time", "hash_style", "march", "cpu", "pie_default", "float_abi", "isa", "arch"];
 const ELF_DERIVED = ["elf", "interp", "needed", "hash_style", "pie_default", "isa"];
 // Why this record's value for column key is a placeholder rather than a fact, or "".
 export function placeholder(r, key){
