@@ -211,7 +211,7 @@ test("compile_failed records are never matched and show the compiler error", () 
 
 test("compile_failed records show placeholders as such, but keep real fields", () => {
   const col = name => COLS.find(c => c[1] === name)[0];
-  for (const name of ["endian", "class", "interp", "needed (minimal)", "time_t bits", "dynamic", "-march", "arch"])
+  for (const name of ["endian", "class", "interp", "needed (minimal)", "time_t bits", "dynamic", "-march", "cpu", "arch"])
     assert.ok(placeholder(FAILED, col(name)), name);
   for (const name of ["toolchain", "triple", "gcc", "libc", "libc ver", "probe"])
     assert.equal(placeholder(FAILED, col(name)), "", name);
@@ -274,13 +274,14 @@ test("target format: given, implied by ELF-only facts, or unknown", () => {
   assert.equal(parseTargetText("3.18.140").format, undefined);
 });
 
-test("2.4/2.5 fields have columns; fields added under them later still become extra columns", () => {
+test("2.4-2.6 fields have columns; fields added under them later still become extra columns", () => {
   const rec = {...BFLT, binary: {format: "bflt", bflt: {version: 4, flags: []}, future: 1},
                probe: {status: "ok", error: "", future: 2}};
   assert.deepEqual(extraCols([rec]).map(c => c[0]).sort(), ["binary.future", "probe.future"]);
-  assert.equal(KNOWN_MINOR, 5);
-  assert.equal(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.5`}), null);
-  assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), /extra columns/);
+  assert.deepEqual(extraCols([{...BFLT, cpu: "cortex-m4"}]), []);              // cpu (2.6) has its own column
+  assert.equal(KNOWN_MINOR, 6);
+  assert.equal(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.6`}), null);
+  assert.match(newerDataNote({schema_version: `${SUPPORTED_MAJOR}.7`}), /extra columns/);
 });
 
 // ---- grouping by target ABI ----------------------------------------------------
